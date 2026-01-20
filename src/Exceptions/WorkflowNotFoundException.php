@@ -10,10 +10,10 @@ final class WorkflowNotFoundException extends WorkflowException
 {
     private const int CODE = 2001;
 
-    public static function withId(WorkflowId $id): self
+    public static function withId(WorkflowId $workflowId): self
     {
         return new self(
-            message: 'Workflow not found: '.$id->value,
+            message: 'Workflow not found: '.$workflowId->value,
             code: self::CODE,
         );
     }

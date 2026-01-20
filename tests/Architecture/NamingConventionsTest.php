@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Maestro\Workflow\Maestro;
+
 arch('exceptions have Exception suffix')
     ->expect('Maestro\Workflow\Exceptions')
     ->toHaveSuffix('Exception');
@@ -23,7 +25,7 @@ arch('service providers have ServiceProvider suffix')
         'Maestro\Workflow\Jobs',
         'Maestro\Workflow\ValueObjects',
         'Maestro\Workflow\Commands',
-        'Maestro\Workflow\Maestro',
+        Maestro::class,
     ]);
 
 arch('commands have Command suffix')

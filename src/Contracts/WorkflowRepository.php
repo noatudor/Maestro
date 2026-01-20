@@ -9,14 +9,14 @@ use Maestro\Workflow\ValueObjects\WorkflowId;
 
 interface WorkflowRepository
 {
-    public function find(WorkflowId $id): ?object;
+    public function find(WorkflowId $workflowId): ?object;
 
     public function save(object $workflow): void;
 
-    public function delete(WorkflowId $id): void;
+    public function delete(WorkflowId $workflowId): void;
 
     /**
      * @return array<string, object>
      */
-    public function findByState(WorkflowState $state): array;
+    public function findByState(WorkflowState $workflowState): array;
 }

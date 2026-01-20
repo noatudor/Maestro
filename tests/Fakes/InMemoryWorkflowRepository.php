@@ -13,9 +13,9 @@ final class InMemoryWorkflowRepository implements WorkflowRepository
     /** @var array<string, object> */
     private array $workflows = [];
 
-    public function find(WorkflowId $id): ?object
+    public function find(WorkflowId $workflowId): ?object
     {
-        return $this->workflows[$id->value] ?? null;
+        return $this->workflows[$workflowId->value] ?? null;
     }
 
     public function save(object $workflow): void
@@ -23,9 +23,9 @@ final class InMemoryWorkflowRepository implements WorkflowRepository
         $this->workflows[$workflow->id->value] = $workflow;
     }
 
-    public function delete(WorkflowId $id): void
+    public function delete(WorkflowId $workflowId): void
     {
-        unset($this->workflows[$id->value]);
+        unset($this->workflows[$workflowId->value]);
     }
 
     /**
@@ -39,11 +39,11 @@ final class InMemoryWorkflowRepository implements WorkflowRepository
     /**
      * @return array<string, object>
      */
-    public function findByState(WorkflowState $state): array
+    public function findByState(WorkflowState $workflowState): array
     {
         return array_filter(
             $this->workflows,
-            static fn (object $workflow): bool => $workflow->state === $state,
+            static fn (object $workflow): bool => $workflow->state === $workflowState,
         );
     }
 
