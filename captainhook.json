@@ -17,7 +17,7 @@
                 "conditions": []
             },
             {
-                "action": "vendor/bin/pint --test",
+                "action": "./vendor/bin/sail bin pint --test",
                 "options": {
                     "label": "Code Style (Pint)"
                 },
@@ -29,7 +29,7 @@
                 ]
             },
             {
-                "action": "vendor/bin/phpstan analyse --no-progress --memory-limit=1G",
+                "action": "./vendor/bin/sail bin phpstan analyse --no-progress --memory-limit=1G",
                 "options": {
                     "label": "Static Analysis (PHPStan)"
                 },
@@ -46,7 +46,7 @@
         "enabled": true,
         "actions": [
             {
-                "action": "vendor/bin/pest --parallel",
+                "action": "./vendor/bin/sail bin pest --parallel",
                 "options": {
                     "label": "Tests (Pest)"
                 },

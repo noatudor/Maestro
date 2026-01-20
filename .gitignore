@@ -24,6 +24,14 @@ _ide_helper_models.php
 /.fleet
 /.vscode
 
+# Environment
+.env
+.env.backup
+.env.production
+
+# Docker
+/docker-compose.override.yml
+
 # Misc
 phpunit.xml
 phpstan.neon

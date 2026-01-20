@@ -16,8 +16,8 @@ final class WorkflowStatusCommand extends Command
     {
         $workflowId = $this->argument('workflow');
 
-        if ($workflowId !== null) {
-            $this->showWorkflowStatus((string) $workflowId);
+        if (is_string($workflowId)) {
+            $this->showWorkflowStatus($workflowId);
 
             return self::SUCCESS;
         }
@@ -29,7 +29,7 @@ final class WorkflowStatusCommand extends Command
 
     private function showWorkflowStatus(string $workflowId): void
     {
-        $this->info("Workflow status for: {$workflowId}");
+        $this->info('Workflow status for: '.$workflowId);
         $this->warn('Status check not yet implemented.');
     }
 

@@ -19,7 +19,7 @@ final class InvalidStepKeyException extends StepException
     public static function invalidFormat(string $value): self
     {
         return new self(
-            message: "Step key '{$value}' has invalid format. Must start with lowercase letter and contain only lowercase letters, numbers, and hyphens.",
+            message: sprintf("Step key '%s' has invalid format. Must start with lowercase letter and contain only lowercase letters, numbers, and hyphens.", $value),
             code: self::CODE,
         );
     }

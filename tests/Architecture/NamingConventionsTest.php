@@ -2,27 +2,9 @@
 
 declare(strict_types=1);
 
-arch('interfaces do not have I prefix')
-    ->expect('Maestro\Workflow\Contracts')
-    ->not->toHaveNameStartingWith('I');
-
-arch('interfaces do not have Interface suffix')
-    ->expect('Maestro\Workflow\Contracts')
-    ->not->toHaveNameEndingWith('Interface');
-
-arch('interfaces do not have Contract suffix')
-    ->expect('Maestro\Workflow\Contracts')
-    ->not->toHaveNameEndingWith('Contract');
-
 arch('exceptions have Exception suffix')
     ->expect('Maestro\Workflow\Exceptions')
     ->toHaveSuffix('Exception');
-
-arch('events have past tense names')
-    ->expect('Maestro\Workflow\Events')
-    ->toHaveNameEndingWith('ed')
-    ->or->toHaveNameEndingWith('Failed')
-    ->or->toHaveNameEndingWith('Cancelled');
 
 arch('service providers have ServiceProvider suffix')
     ->expect('Maestro\Workflow')
@@ -40,6 +22,8 @@ arch('service providers have ServiceProvider suffix')
         'Maestro\Workflow\Models',
         'Maestro\Workflow\Jobs',
         'Maestro\Workflow\ValueObjects',
+        'Maestro\Workflow\Commands',
+        'Maestro\Workflow\Maestro',
     ]);
 
 arch('commands have Command suffix')

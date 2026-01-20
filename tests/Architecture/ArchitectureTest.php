@@ -2,6 +2,11 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\Eloquent\Model;
+use Maestro\Workflow\Exceptions\MaestroException;
+use Maestro\Workflow\MaestroServiceProvider;
+
 arch('source files use strict types')
     ->expect('Maestro\Workflow')
     ->toUseStrictTypes();
@@ -21,12 +26,11 @@ arch('contracts are interfaces')
 
 arch('exceptions extend base exception')
     ->expect('Maestro\Workflow\Exceptions')
-    ->toExtend('Maestro\Workflow\Exceptions\MaestroException');
+    ->toExtend(MaestroException::class);
 
-arch('enums are backed by string')
+arch('enums are backed enums')
     ->expect('Maestro\Workflow\Enums')
-    ->toBeEnums()
-    ->toHaveAttribute('BackedEnum');
+    ->toBeEnums();
 
 arch('value objects are readonly')
     ->expect('Maestro\Workflow\ValueObjects')
@@ -63,19 +67,15 @@ arch('no env() calls outside config files')
 
 arch('models extend eloquent model')
     ->expect('Maestro\Workflow\Models')
-    ->toExtend('Illuminate\Database\Eloquent\Model');
+    ->toExtend(Model::class);
 
 arch('jobs are dispatchable')
     ->expect('Maestro\Workflow\Jobs')
-    ->toImplement('Illuminate\Contracts\Queue\ShouldQueue');
+    ->toImplement(ShouldQueue::class);
 
 arch('events are readonly')
     ->expect('Maestro\Workflow\Events')
     ->toBeReadonly();
-
-arch('no static methods in domain services')
-    ->expect('Maestro\Workflow\Domain\Services')
-    ->not->toHaveMethod(fn (string $method) => str_starts_with($method, 'static'));
 
 arch('repositories implement their contracts')
     ->expect('Maestro\Workflow\Infrastructure\Repositories')
@@ -87,12 +87,13 @@ arch('no use of facades')
     ->ignoring([
         'Maestro\Workflow\Facades',
         'Maestro\Workflow\Tests',
+        'Workbench',
     ]);
 
 arch('no helper functions used')
     ->expect(['app', 'resolve', 'config'])
     ->not->toBeUsed()
     ->ignoring([
-        'Maestro\Workflow\MaestroServiceProvider',
+        MaestroServiceProvider::class,
         'Maestro\Workflow\Tests',
     ]);

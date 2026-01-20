@@ -32,6 +32,7 @@
     "require-dev": {
         "captainhook/captainhook": "^5.23",
         "captainhook/plugin-composer": "^5.3",
+        "laravel/sail": "^1.41",
         "laravel/pint": "^1.14",
         "larastan/larastan": "^3.0",
         "nunomaduro/collision": "^8.8",
@@ -56,27 +57,31 @@
         "psr-4": {
             "Maestro\\Workflow\\Tests\\": "tests/",
             "Maestro\\Workflow\\Benchmarks\\": "benchmarks/",
-            "Workbench\\App\\": "workbench/app/"
+            "Workbench\\App\\": "workbench/app/",
+            "Workbench\\Database\\Factories\\": "workbench/database/factories/",
+            "Workbench\\Database\\Seeders\\": "workbench/database/seeders/"
         }
     },
     "scripts": {
         "post-autoload-dump": [
+            "@clear",
+            "@prepare",
             "@composer run prepare",
             "captainhook install --force --skip-existing"
         ],
         "prepare": "@php vendor/bin/testbench package:discover --ansi",
-        "analyse": "vendor/bin/phpstan analyse --memory-limit=2G",
-        "baseline": "vendor/bin/phpstan analyse --generate-baseline --memory-limit=2G",
-        "test": "vendor/bin/pest",
-        "test-coverage": "vendor/bin/pest --coverage --min=95",
-        "test-unit": "vendor/bin/pest --testsuite=Unit",
-        "test-feature": "vendor/bin/pest --testsuite=Feature",
-        "test-arch": "vendor/bin/pest --testsuite=Architecture",
-        "format": "vendor/bin/pint",
-        "format-check": "vendor/bin/pint --test",
-        "refactor": "vendor/bin/rector process",
-        "refactor-check": "vendor/bin/rector process --dry-run",
-        "bench": "vendor/bin/phpbench run --report=default",
+        "analyse": "./vendor/bin/sail bin phpstan analyse --memory-limit=2G",
+        "baseline": "./vendor/bin/sail bin phpstan analyse --generate-baseline --memory-limit=2G",
+        "test": "./vendor/bin/sail bin pest",
+        "test-coverage": "./vendor/bin/sail bin pest --coverage --min=95",
+        "test-unit": "./vendor/bin/sail bin pest --testsuite=Unit",
+        "test-feature": "./vendor/bin/sail bin pest --testsuite=Feature",
+        "test-arch": "./vendor/bin/sail bin pest --testsuite=Architecture",
+        "format": "./vendor/bin/sail bin pint",
+        "format-check": "./vendor/bin/sail bin pint --test",
+        "refactor": "./vendor/bin/sail bin rector process",
+        "refactor-check": "./vendor/bin/sail bin rector process --dry-run",
+        "bench": "./vendor/bin/sail bin phpbench run --report=default",
         "check": [
             "@format-check",
             "@analyse",
@@ -85,6 +90,17 @@
         "fix": [
             "@format",
             "@refactor"
+        ],
+        "clear": "@php vendor/bin/testbench package:purge-skeleton --ansi",
+        "build": "@php vendor/bin/testbench workbench:build --ansi",
+        "serve": [
+            "Composer\\Config::disableProcessTimeout",
+            "@build",
+            "@php vendor/bin/testbench serve --ansi"
+        ],
+        "lint": [
+            "./vendor/bin/sail bin pint --ansi",
+            "./vendor/bin/sail bin phpstan analyse --verbose --ansi"
         ]
     },
     "config": {

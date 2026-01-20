@@ -18,7 +18,6 @@ use Rector\CodeQuality\Rector\If_\ShortenElseIfRector;
 use Rector\CodeQuality\Rector\If_\SimplifyIfElseToTernaryRector;
 use Rector\CodeQuality\Rector\If_\SimplifyIfReturnBoolRector;
 use Rector\CodeQuality\Rector\Ternary\ArrayKeyExistsTernaryThenValueToCoalescingRector;
-use Rector\CodeQuality\Rector\Ternary\SimplifyTernaryIdenticalRector;
 use Rector\CodingStyle\Rector\ArrowFunction\StaticArrowFunctionRector;
 use Rector\CodingStyle\Rector\Closure\StaticClosureRector;
 use Rector\CodingStyle\Rector\Encapsed\EncapsedStringsToSprintfRector;
@@ -46,7 +45,6 @@ use Rector\DeadCode\Rector\Property\RemoveUnusedPrivatePropertyRector;
 use Rector\DeadCode\Rector\PropertyProperty\RemoveNullPropertyInitializationRector;
 use Rector\DeadCode\Rector\Return_\RemoveDeadConditionAboveReturnRector;
 use Rector\DeadCode\Rector\Stmt\RemoveUnreachableStatementRector;
-use Rector\DeadCode\Rector\StmtsAwareInterface\RemoveJustPropertyFetchForAssignRector;
 use Rector\EarlyReturn\Rector\Foreach_\ChangeNestedForeachIfsToEarlyContinueRector;
 use Rector\EarlyReturn\Rector\If_\ChangeIfElseValueAssignToEarlyReturnRector;
 use Rector\EarlyReturn\Rector\If_\ChangeNestedIfsToEarlyReturnRector;
@@ -59,7 +57,7 @@ use Rector\Naming\Rector\ClassMethod\RenameParamToMatchTypeRector;
 use Rector\Naming\Rector\Foreach_\RenameForeachValueVariableToMatchExprVariableRector;
 use Rector\Php74\Rector\Closure\ClosureToArrowFunctionRector;
 use Rector\Php80\Rector\Class_\ClassPropertyAssignToConstructorPromotionRector;
-use Rector\Php81\Rector\Array_\FirstClassCallableRector;
+use Rector\Php81\Rector\Array_\ArrayToFirstClassCallableRector;
 use Rector\Php81\Rector\ClassMethod\NewInInitializerRector;
 use Rector\Php81\Rector\FuncCall\NullToStrictStringFuncCallArgRector;
 use Rector\Php81\Rector\Property\ReadOnlyPropertyRector;
@@ -77,20 +75,18 @@ use Rector\TypeDeclaration\Rector\ClassMethod\AddParamTypeBasedOnPHPUnitDataProv
 use Rector\TypeDeclaration\Rector\ClassMethod\AddParamTypeFromPropertyTypeRector;
 use Rector\TypeDeclaration\Rector\ClassMethod\AddReturnTypeDeclarationBasedOnParentClassMethodRector;
 use Rector\TypeDeclaration\Rector\ClassMethod\AddVoidReturnTypeWhereNoReturnRector;
-use Rector\TypeDeclaration\Rector\ClassMethod\BoolReturnTypeFromStrictScalarReturnsRector;
+use Rector\TypeDeclaration\Rector\ClassMethod\BoolReturnTypeFromBooleanStrictReturnsRector;
 use Rector\TypeDeclaration\Rector\ClassMethod\NumericReturnTypeFromStrictScalarReturnsRector;
 use Rector\TypeDeclaration\Rector\ClassMethod\ParamTypeByMethodCallTypeRector;
 use Rector\TypeDeclaration\Rector\ClassMethod\ParamTypeByParentCallTypeRector;
 use Rector\TypeDeclaration\Rector\ClassMethod\ReturnNeverTypeRector;
 use Rector\TypeDeclaration\Rector\ClassMethod\ReturnTypeFromReturnDirectArrayRector;
 use Rector\TypeDeclaration\Rector\ClassMethod\ReturnTypeFromReturnNewRector;
-use Rector\TypeDeclaration\Rector\ClassMethod\ReturnTypeFromStrictBoolReturnExprRector;
 use Rector\TypeDeclaration\Rector\ClassMethod\ReturnTypeFromStrictConstantReturnRector;
 use Rector\TypeDeclaration\Rector\ClassMethod\ReturnTypeFromStrictFluentReturnRector;
 use Rector\TypeDeclaration\Rector\ClassMethod\ReturnTypeFromStrictNativeCallRector;
 use Rector\TypeDeclaration\Rector\ClassMethod\ReturnTypeFromStrictNewArrayRector;
 use Rector\TypeDeclaration\Rector\ClassMethod\ReturnTypeFromStrictParamRector;
-use Rector\TypeDeclaration\Rector\ClassMethod\ReturnTypeFromStrictScalarReturnExprRector;
 use Rector\TypeDeclaration\Rector\ClassMethod\ReturnTypeFromStrictTypedPropertyRector;
 use Rector\TypeDeclaration\Rector\ClassMethod\StrictArrayParamDimFetchRector;
 use Rector\TypeDeclaration\Rector\ClassMethod\StrictStringParamConcatRector;
@@ -117,7 +113,6 @@ return RectorConfig::configure()
         typeDeclarations: true,
         privatization: true,
         earlyReturn: true,
-        strictBooleans: true,
     )
     ->withRules([
         // PHP 8.4 features
@@ -129,7 +124,7 @@ return RectorConfig::configure()
         // PHP 8.1 features
         ReadOnlyPropertyRector::class,
         NewInInitializerRector::class,
-        FirstClassCallableRector::class,
+        ArrayToFirstClassCallableRector::class,
 
         // PHP 8.0 features
         ClassPropertyAssignToConstructorPromotionRector::class,
@@ -142,7 +137,6 @@ return RectorConfig::configure()
         CombineIfRector::class,
         ShortenElseIfRector::class,
         SimplifyBoolIdenticalTrueRector::class,
-        SimplifyTernaryIdenticalRector::class,
         SimplifyDeMorganBinaryRector::class,
         FlipTypeControlToUseExclusiveTypeRector::class,
         ExplicitBoolCompareRector::class,
@@ -183,7 +177,6 @@ return RectorConfig::configure()
         RemoveDuplicatedArrayKeyRector::class,
         RecastingRemovalRector::class,
         RemoveConcatAutocastRector::class,
-        RemoveJustPropertyFetchForAssignRector::class,
 
         // Early return
         ChangeNestedIfsToEarlyReturnRector::class,
@@ -204,18 +197,16 @@ return RectorConfig::configure()
         AddClosureVoidReturnTypeWhereNoReturnRector::class,
         AddArrowFunctionReturnTypeRector::class,
         AddTestsVoidReturnTypeWhereNoReturnRector::class,
-        ReturnTypeFromStrictBoolReturnExprRector::class,
         ReturnTypeFromStrictConstantReturnRector::class,
         ReturnTypeFromStrictNativeCallRector::class,
         ReturnTypeFromStrictNewArrayRector::class,
         ReturnTypeFromStrictParamRector::class,
-        ReturnTypeFromStrictScalarReturnExprRector::class,
         ReturnTypeFromStrictTypedPropertyRector::class,
         ReturnTypeFromStrictFluentReturnRector::class,
         ReturnTypeFromReturnNewRector::class,
         ReturnTypeFromReturnDirectArrayRector::class,
         ReturnNeverTypeRector::class,
-        BoolReturnTypeFromStrictScalarReturnsRector::class,
+        BoolReturnTypeFromBooleanStrictReturnsRector::class,
         NumericReturnTypeFromStrictScalarReturnsRector::class,
         ReturnTypeFromStrictTernaryRector::class,
         TypedPropertyFromStrictConstructorRector::class,

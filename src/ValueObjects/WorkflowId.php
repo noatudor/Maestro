@@ -5,12 +5,18 @@ declare(strict_types=1);
 namespace Maestro\Workflow\ValueObjects;
 
 use Ramsey\Uuid\Uuid;
+use Stringable;
 
-final readonly class WorkflowId
+final readonly class WorkflowId implements Stringable
 {
     private function __construct(
         public string $value,
     ) {}
+
+    public function __toString(): string
+    {
+        return $this->value;
+    }
 
     public static function generate(): self
     {
@@ -28,11 +34,6 @@ final readonly class WorkflowId
     }
 
     public function toString(): string
-    {
-        return $this->value;
-    }
-
-    public function __toString(): string
     {
         return $this->value;
     }

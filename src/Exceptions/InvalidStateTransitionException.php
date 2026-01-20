@@ -13,7 +13,7 @@ final class InvalidStateTransitionException extends WorkflowException
     public static function forWorkflow(WorkflowState $from, WorkflowState $to): self
     {
         return new self(
-            message: "Cannot transition workflow from '{$from->value}' to '{$to->value}'",
+            message: sprintf("Cannot transition workflow from '%s' to '%s'", $from->value, $to->value),
             code: self::CODE,
         );
     }

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Maestro\Workflow\Tests\TestCase;
+use Ramsey\Uuid\Uuid;
 
 /*
 |--------------------------------------------------------------------------
@@ -29,9 +30,7 @@ uses(TestCase::class)->in('Feature', 'Integration');
 |
 */
 
-expect()->extend('toBeValidUuid', function () {
-    return $this->toMatch('/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i');
-});
+expect()->extend('toBeValidUuid', fn () => $this->toMatch('/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i'));
 
 expect()->extend('toBeImmutable', function () {
     $reflection = new ReflectionClass($this->value);
@@ -53,10 +52,10 @@ expect()->extend('toBeImmutable', function () {
 
 function fixtures(string $path = ''): string
 {
-    return __DIR__.'/Fixtures'.($path ? '/'.$path : '');
+    return __DIR__.'/Fixtures'.($path !== '' && $path !== '0' ? '/'.$path : '');
 }
 
 function createWorkflowId(): string
 {
-    return \Ramsey\Uuid\Uuid::uuid7()->toString();
+    return Uuid::uuid7()->toString();
 }
