@@ -1,0 +1,90 @@
+{
+    "config": {
+        "verbosity": "normal",
+        "run-mode": "local",
+        "fail-on-first-error": true,
+        "ansi-colors": true,
+        "git-directory": ".git",
+        "includes": [],
+        "custom": {}
+    },
+    "pre-commit": {
+        "enabled": true,
+        "actions": [
+            {
+                "action": "\\CaptainHook\\App\\Hook\\Message\\Action\\Beams",
+                "options": [],
+                "conditions": []
+            },
+            {
+                "action": "vendor/bin/pint --test",
+                "options": {
+                    "label": "Code Style (Pint)"
+                },
+                "conditions": [
+                    {
+                        "exec": "\\CaptainHook\\App\\Hook\\Condition\\FileStaged\\OfType",
+                        "args": ["php"]
+                    }
+                ]
+            },
+            {
+                "action": "vendor/bin/phpstan analyse --no-progress --memory-limit=1G",
+                "options": {
+                    "label": "Static Analysis (PHPStan)"
+                },
+                "conditions": [
+                    {
+                        "exec": "\\CaptainHook\\App\\Hook\\Condition\\FileStaged\\OfType",
+                        "args": ["php"]
+                    }
+                ]
+            }
+        ]
+    },
+    "pre-push": {
+        "enabled": true,
+        "actions": [
+            {
+                "action": "vendor/bin/pest --parallel",
+                "options": {
+                    "label": "Tests (Pest)"
+                },
+                "conditions": []
+            }
+        ]
+    },
+    "commit-msg": {
+        "enabled": true,
+        "actions": [
+            {
+                "action": "\\CaptainHook\\App\\Hook\\Message\\Action\\Regex",
+                "options": {
+                    "regex": "/^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\\([a-z0-9-]+\\))?!?:\\s.{1,72}$/",
+                    "error": "Commit message must follow Conventional Commits format:\n  <type>(<scope>): <description>\n\nTypes: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert\nExample: feat(workflow): add pause functionality"
+                },
+                "conditions": []
+            }
+        ]
+    },
+    "prepare-commit-msg": {
+        "enabled": false,
+        "actions": []
+    },
+    "post-commit": {
+        "enabled": false,
+        "actions": []
+    },
+    "post-checkout": {
+        "enabled": false,
+        "actions": []
+    },
+    "post-merge": {
+        "enabled": false,
+        "actions": []
+    },
+    "post-rewrite": {
+        "enabled": false,
+        "actions": []
+    }
+}

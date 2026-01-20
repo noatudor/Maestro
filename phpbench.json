@@ -1,0 +1,43 @@
+{
+    "$schema": "https://phpbench.github.io/phpbench/schema/phpbench.json",
+    "runner.bootstrap": "vendor/autoload.php",
+    "runner.path": "benchmarks",
+    "runner.php_config": {
+        "memory_limit": "512M"
+    },
+    "runner.iterations": 5,
+    "runner.revs": 100,
+    "runner.warmup": 1,
+    "runner.retry_threshold": 3,
+    "runner.time_unit": "microseconds",
+    "report.generators": {
+        "default": {
+            "generator": "composite",
+            "reports": ["aggregate", "env"]
+        },
+        "compare": {
+            "generator": "composite",
+            "reports": ["compare", "env"]
+        },
+        "ci": {
+            "generator": "composite",
+            "reports": ["aggregate"]
+        }
+    },
+    "report.outputs": {
+        "console": {
+            "renderer": "console"
+        },
+        "html": {
+            "renderer": "html",
+            "path": "build/benchmark.html"
+        },
+        "markdown": {
+            "renderer": "delimited",
+            "path": "build/benchmark.md",
+            "delimiter": "|"
+        }
+    },
+    "storage.store": "build/phpbench/storage",
+    "storage.xml_storage_path": "build/phpbench/xml"
+}
