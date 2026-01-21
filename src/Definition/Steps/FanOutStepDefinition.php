@@ -6,6 +6,7 @@ namespace Maestro\Workflow\Definition\Steps;
 
 use Closure;
 use Maestro\Workflow\Contracts\FanOutStep;
+use Maestro\Workflow\Contracts\StepCondition;
 use Maestro\Workflow\Contracts\StepOutput;
 use Maestro\Workflow\Definition\Config\NOfMCriteria;
 use Maestro\Workflow\Definition\Config\QueueConfiguration;
@@ -36,6 +37,7 @@ final readonly class FanOutStepDefinition extends AbstractStepDefinition impleme
         RetryConfiguration $retryConfiguration,
         StepTimeout $stepTimeout,
         QueueConfiguration $queueConfiguration,
+        ?StepCondition $stepCondition,
     ) {
         parent::__construct(
             $stepKey,
@@ -46,6 +48,7 @@ final readonly class FanOutStepDefinition extends AbstractStepDefinition impleme
             $retryConfiguration,
             $stepTimeout,
             $queueConfiguration,
+            $stepCondition,
         );
     }
 
@@ -68,6 +71,7 @@ final readonly class FanOutStepDefinition extends AbstractStepDefinition impleme
         ?RetryConfiguration $retryConfiguration = null,
         ?StepTimeout $stepTimeout = null,
         ?QueueConfiguration $queueConfiguration = null,
+        ?StepCondition $stepCondition = null,
     ): self {
         return new self(
             $stepKey,
@@ -83,6 +87,7 @@ final readonly class FanOutStepDefinition extends AbstractStepDefinition impleme
             $retryConfiguration ?? RetryConfiguration::default(),
             $stepTimeout ?? StepTimeout::none(),
             $queueConfiguration ?? QueueConfiguration::default(),
+            $stepCondition,
         );
     }
 

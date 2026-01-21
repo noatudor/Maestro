@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Maestro\Workflow\Definition\Builders;
 
 use Closure;
+use Maestro\Workflow\Contracts\StepCondition;
 use Maestro\Workflow\Contracts\StepOutput;
 use Maestro\Workflow\Definition\Config\NOfMCriteria;
 use Maestro\Workflow\Definition\Config\QueueConfiguration;
@@ -45,6 +46,8 @@ final class FanOutStepBuilder
     private ?StepTimeout $stepTimeout = null;
 
     private ?QueueConfiguration $queueConfiguration = null;
+
+    private ?StepCondition $stepCondition = null;
 
     private function __construct(
         private readonly StepKey $stepKey,
@@ -249,6 +252,13 @@ final class FanOutStepBuilder
         return $this;
     }
 
+    public function when(StepCondition $condition): self
+    {
+        $this->stepCondition = $condition;
+
+        return $this;
+    }
+
     public function build(): FanOutStepDefinition
     {
         return FanOutStepDefinition::create(
@@ -265,6 +275,7 @@ final class FanOutStepBuilder
             $this->retryConfiguration,
             $this->stepTimeout,
             $this->queueConfiguration,
+            $this->stepCondition,
         );
     }
 }

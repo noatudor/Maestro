@@ -58,4 +58,11 @@ interface StepDefinition
      * Queue configuration for job dispatch.
      */
     public function queueConfiguration(): QueueConfiguration;
+
+    /**
+     * Condition for executing this step.
+     *
+     * @return StepCondition|null Null means always execute
+     */
+    public function condition(): ?StepCondition;
 }
