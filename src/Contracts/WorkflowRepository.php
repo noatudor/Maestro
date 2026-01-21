@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Maestro\Workflow\Contracts;
 
+use Carbon\CarbonImmutable;
 use Deprecated;
 use Maestro\Workflow\Domain\WorkflowInstance;
 use Maestro\Workflow\Enums\WorkflowState;
@@ -50,6 +51,15 @@ interface WorkflowRepository
      * @return list<WorkflowInstance>
      */
     public function findByDefinitionKey(string $definitionKey): array;
+
+    /**
+     * Find terminal workflows completed before a threshold.
+     *
+     * Terminal workflows are those in SUCCEEDED, FAILED, or CANCELLED state.
+     *
+     * @return list<WorkflowInstance>
+     */
+    public function findTerminalBefore(CarbonImmutable $threshold): array;
 
     /**
      * Acquire a pessimistic lock on the workflow row using SELECT FOR UPDATE.

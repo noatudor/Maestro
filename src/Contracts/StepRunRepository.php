@@ -65,4 +65,9 @@ interface StepRunRepository
         int $failedJobCount,
         CarbonImmutable $finishedAt,
     ): bool;
+
+    /**
+     * Delete all step runs for a workflow.
+     */
+    public function deleteByWorkflowId(WorkflowId $workflowId): void;
 }

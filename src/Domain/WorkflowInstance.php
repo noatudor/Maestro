@@ -249,6 +249,23 @@ final class WorkflowInstance
     }
 
     /**
+     * Succeed an empty workflow immediately from Pending state.
+     *
+     * Transitions through Running to Succeeded in one operation.
+     * Used for workflows with no steps.
+     *
+     * @throws InvalidStateTransitionException
+     */
+    public function succeedImmediately(): void
+    {
+        $this->transitionTo(WorkflowState::Running);
+        $this->transitionTo(WorkflowState::Succeeded);
+        $this->succeededAt = CarbonImmutable::now();
+        $this->currentStepKey = null;
+        $this->touch();
+    }
+
+    /**
      * @throws InvalidStateTransitionException
      */
     public function fail(?string $code = null, ?string $message = null): void

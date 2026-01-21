@@ -45,4 +45,9 @@ interface JobLedgerRepository
      * Find jobs in DISPATCHED state that were dispatched before the threshold.
      */
     public function findStaleDispatchedJobs(CarbonImmutable $threshold): JobRecordCollection;
+
+    /**
+     * Delete all job records for a workflow.
+     */
+    public function deleteByWorkflowId(WorkflowId $workflowId): void;
 }

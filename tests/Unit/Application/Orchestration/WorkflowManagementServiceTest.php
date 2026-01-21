@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Container\Container;
 use Maestro\Workflow\Application\Context\WorkflowContextProviderFactory;
 use Maestro\Workflow\Application\Dependency\StepDependencyChecker;
-use Maestro\Workflow\Application\Job\DefaultIdempotencyKeyGenerator;
 use Maestro\Workflow\Application\Job\JobDispatchService;
 use Maestro\Workflow\Application\Orchestration\FailurePolicyHandler;
 use Maestro\Workflow\Application\Orchestration\StepDispatcher;
@@ -44,9 +44,11 @@ describe('WorkflowManagementService', function (): void {
         $stepDependencyChecker = new StepDependencyChecker($this->stepOutputRepository);
         $stepOutputStoreFactory = new StepOutputStoreFactory($this->stepOutputRepository);
         $workflowContextProviderFactory = new WorkflowContextProviderFactory($mock);
+        $dispatcherMock = Mockery::mock(Dispatcher::class);
+        $dispatcherMock->shouldReceive('dispatch');
         $jobDispatchService = new JobDispatchService(
+            $dispatcherMock,
             $this->jobLedgerRepository,
-            new DefaultIdempotencyKeyGenerator(),
         );
 
         $stepDispatcher = new StepDispatcher(
@@ -135,7 +137,7 @@ describe('WorkflowManagementService', function (): void {
             $pausedWorkflow = $this->service->pauseWorkflow($workflowInstance->id, 'Test pause');
 
             expect($pausedWorkflow->state())->toBe(WorkflowState::Paused);
-            expect($pausedWorkflow->pauseReason())->toBe('Test pause');
+            expect($pausedWorkflow->pausedReason())->toBe('Test pause');
         });
 
         it('throws for non-existent workflow', function (): void {

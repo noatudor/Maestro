@@ -172,7 +172,8 @@ final readonly class WorkflowAdvancer
 
         $firstStep = $workflowDefinition->getFirstStep();
         if (! $firstStep instanceof StepDefinition) {
-            $workflowInstance->succeed();
+            // Empty workflow: transition through Running to Succeeded
+            $workflowInstance->succeedImmediately();
             $this->workflowRepository->save($workflowInstance);
 
             return;

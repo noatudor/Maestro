@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Container\Container;
 use Maestro\Workflow\Application\Context\WorkflowContextProviderFactory;
 use Maestro\Workflow\Application\Dependency\StepDependencyChecker;
-use Maestro\Workflow\Application\Job\DefaultIdempotencyKeyGenerator;
 use Maestro\Workflow\Application\Job\JobDispatchService;
 use Maestro\Workflow\Application\Orchestration\FailurePolicyHandler;
 use Maestro\Workflow\Application\Orchestration\StepDispatcher;
@@ -15,6 +15,7 @@ use Maestro\Workflow\Definition\Builders\WorkflowDefinitionBuilder;
 use Maestro\Workflow\Definition\WorkflowDefinitionRegistry;
 use Maestro\Workflow\Domain\StepRun;
 use Maestro\Workflow\Domain\WorkflowInstance;
+use Maestro\Workflow\Enums\FailurePolicy;
 use Maestro\Workflow\Enums\WorkflowState;
 use Maestro\Workflow\Tests\Fakes\InMemoryJobLedgerRepository;
 use Maestro\Workflow\Tests\Fakes\InMemoryStepOutputRepository;
@@ -37,9 +38,11 @@ describe('FailurePolicyHandler', function (): void {
         $stepDependencyChecker = new StepDependencyChecker($this->stepOutputRepository);
         $stepOutputStoreFactory = new StepOutputStoreFactory($this->stepOutputRepository);
         $workflowContextProviderFactory = new WorkflowContextProviderFactory($mock);
+        $dispatcherMock = Mockery::mock(Dispatcher::class);
+        $dispatcherMock->shouldReceive('dispatch');
         $jobDispatchService = new JobDispatchService(
+            $dispatcherMock,
             $this->jobLedgerRepository,
-            new DefaultIdempotencyKeyGenerator(),
         );
 
         $stepDispatcher = new StepDispatcher(
@@ -125,7 +128,7 @@ describe('FailurePolicyHandler', function (): void {
 
             $updatedWorkflow = $this->workflowRepository->find($workflowInstance->id);
             expect($updatedWorkflow->state())->toBe(WorkflowState::Paused);
-            expect($updatedWorkflow->pauseReason())->toContain('Step "test-step" failed');
+            expect($updatedWorkflow->pausedReason())->toContain('Step "test-step" failed');
         });
     });
 
@@ -244,14 +247,14 @@ describe('FailurePolicyHandler', function (): void {
 
     describe('ContinueWithPartial policy', function (): void {
         it('saves workflow when step fails with ContinueWithPartial policy', function (): void {
-            $stepDefinition = SingleJobStepBuilder::create('test-step')
+            $singleJobStepDefinition = SingleJobStepBuilder::create('test-step')
                 ->displayName('Test Step')
                 ->job(TestJob::class)
-                ->continueWithPartial()
+                ->onFailure(FailurePolicy::ContinueWithPartial)
                 ->build();
 
             $workflowDefinition = WorkflowDefinitionBuilder::create('test-workflow')
-                ->addStep($stepDefinition)
+                ->addStep($singleJobStepDefinition)
                 ->build();
             $this->workflowDefinitionRegistry->register($workflowDefinition);
 
@@ -270,7 +273,7 @@ describe('FailurePolicyHandler', function (): void {
             $stepRun->fail('ERROR_CODE', 'Step failed');
             $this->stepRunRepository->save($stepRun);
 
-            $this->handler->handle($workflowInstance, $stepRun, $stepDefinition);
+            $this->handler->handle($workflowInstance, $stepRun, $singleJobStepDefinition);
 
             $updatedWorkflow = $this->workflowRepository->find($workflowInstance->id);
             expect($updatedWorkflow->state())->toBe(WorkflowState::Running);

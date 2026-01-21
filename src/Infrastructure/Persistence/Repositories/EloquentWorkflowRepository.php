@@ -163,6 +163,29 @@ final readonly class EloquentWorkflowRepository implements WorkflowRepository
     }
 
     /**
+     * @return list<WorkflowInstance>
+     *
+     * @throws InvalidDefinitionKeyException
+     * @throws InvalidDefinitionVersionException
+     * @throws InvalidStepKeyException
+     */
+    public function findTerminalBefore(CarbonImmutable $threshold): array
+    {
+        $terminalStates = [
+            WorkflowState::Succeeded->value,
+            WorkflowState::Failed->value,
+            WorkflowState::Cancelled->value,
+        ];
+
+        $models = WorkflowModel::query()
+            ->whereIn('state', $terminalStates)
+            ->where('updated_at', '<', $threshold)
+            ->get();
+
+        return $this->hydrateModels($models->all());
+    }
+
+    /**
      * @throws WorkflowNotFoundException
      * @throws WorkflowLockedException
      * @throws InvalidDefinitionKeyException

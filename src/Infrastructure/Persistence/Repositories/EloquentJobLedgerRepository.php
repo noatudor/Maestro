@@ -187,6 +187,13 @@ final readonly class EloquentJobLedgerRepository implements JobLedgerRepository
         return new JobRecordCollection($this->hydrateModels($models->all()));
     }
 
+    public function deleteByWorkflowId(WorkflowId $workflowId): void
+    {
+        JobLedgerModel::query()
+            ->forWorkflow($workflowId->value)
+            ->delete();
+    }
+
     /**
      * @param array<int|string, JobLedgerModel> $models
      *

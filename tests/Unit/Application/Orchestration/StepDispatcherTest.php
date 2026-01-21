@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Container\Container;
 use Maestro\Workflow\Application\Context\WorkflowContextProviderFactory;
 use Maestro\Workflow\Application\Dependency\StepDependencyChecker;
-use Maestro\Workflow\Application\Job\DefaultIdempotencyKeyGenerator;
 use Maestro\Workflow\Application\Job\JobDispatchService;
 use Maestro\Workflow\Application\Orchestration\StepDispatcher;
 use Maestro\Workflow\Application\Output\StepOutputStoreFactory;
@@ -20,6 +20,8 @@ use Maestro\Workflow\Exceptions\StepDependencyException;
 use Maestro\Workflow\Tests\Fakes\InMemoryJobLedgerRepository;
 use Maestro\Workflow\Tests\Fakes\InMemoryStepOutputRepository;
 use Maestro\Workflow\Tests\Fakes\InMemoryStepRunRepository;
+use Maestro\Workflow\Tests\Fixtures\Jobs\CustomArgsJob;
+use Maestro\Workflow\Tests\Fixtures\Jobs\ProcessItemJob;
 use Maestro\Workflow\Tests\Fixtures\Jobs\TestJob;
 use Maestro\Workflow\Tests\Fixtures\Outputs\TestOutput;
 use Maestro\Workflow\ValueObjects\StepKey;
@@ -44,9 +46,11 @@ describe('StepDispatcher', function (): void {
 
         $workflowContextProviderFactory = new WorkflowContextProviderFactory($mock);
 
+        $dispatcherMock = Mockery::mock(Dispatcher::class);
+        $dispatcherMock->shouldReceive('dispatch');
         $jobDispatchService = new JobDispatchService(
+            $dispatcherMock,
             $this->jobLedgerRepository,
-            new DefaultIdempotencyKeyGenerator(),
         );
 
         $this->dispatcher = new StepDispatcher(
@@ -82,7 +86,7 @@ describe('StepDispatcher', function (): void {
             expect($stepRun)->toBeInstanceOf(StepRun::class);
             expect($stepRun->stepKey->toString())->toBe('test-step');
             expect($stepRun->status())->toBe(StepState::Running);
-            expect($stepRun->totalJobCount)->toBe(1);
+            expect($stepRun->totalJobCount())->toBe(1);
         });
 
         it('increments attempt for retry', function (): void {
@@ -118,7 +122,7 @@ describe('StepDispatcher', function (): void {
         it('dispatches fan-out jobs', function (): void {
             $fanOutStepDefinition = FanOutStepBuilder::create('fan-out-step')
                 ->displayName('Fan Out Step')
-                ->job(TestJob::class)
+                ->job(ProcessItemJob::class)
                 ->iterateOver(static fn (): array => [1, 2, 3])
                 ->build();
 
@@ -135,7 +139,7 @@ describe('StepDispatcher', function (): void {
 
             $stepRun = $this->dispatcher->dispatchStep($workflowInstance, $fanOutStepDefinition);
 
-            expect($stepRun->totalJobCount)->toBe(3);
+            expect($stepRun->totalJobCount())->toBe(3);
         });
 
         it('handles empty fan-out gracefully', function (): void {
@@ -158,7 +162,7 @@ describe('StepDispatcher', function (): void {
 
             $stepRun = $this->dispatcher->dispatchStep($workflowInstance, $fanOutStepDefinition);
 
-            expect($stepRun->totalJobCount)->toBe(0);
+            expect($stepRun->totalJobCount())->toBe(0);
         });
 
         it('throws when dependencies not met', function (): void {
@@ -259,7 +263,7 @@ describe('StepDispatcher', function (): void {
         it('uses job arguments factory when provided', function (): void {
             $fanOutStepDefinition = FanOutStepBuilder::create('fan-out-step')
                 ->displayName('Fan Out Step')
-                ->job(TestJob::class)
+                ->job(CustomArgsJob::class)
                 ->iterateOver(static fn (): array => ['item1', 'item2'])
                 ->withJobArguments(static fn ($item): array => ['custom' => $item])
                 ->build();
@@ -277,7 +281,7 @@ describe('StepDispatcher', function (): void {
 
             $stepRun = $this->dispatcher->dispatchStep($workflowInstance, $fanOutStepDefinition);
 
-            expect($stepRun->totalJobCount)->toBe(2);
+            expect($stepRun->totalJobCount())->toBe(2);
         });
     });
 });

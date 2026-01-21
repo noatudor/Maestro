@@ -198,7 +198,7 @@ describe('AbstractCollection', static function (): void {
 
             $stepRunCollection = StepRunCollection::fromArray([$step1, $step2, $step3]);
 
-            $result = $stepRunCollection->sum(static fn (StepRun $stepRun): int => $stepRun->totalJobCount);
+            $result = $stepRunCollection->sum(static fn (StepRun $stepRun): int => $stepRun->totalJobCount());
 
             expect($result)->toBe(10);
         });
@@ -206,7 +206,7 @@ describe('AbstractCollection', static function (): void {
         it('returns 0 for empty collection', function (): void {
             $stepRunCollection = StepRunCollection::empty();
 
-            $result = $stepRunCollection->sum(static fn (StepRun $stepRun): int => $stepRun->totalJobCount);
+            $result = $stepRunCollection->sum(static fn (StepRun $stepRun): int => $stepRun->totalJobCount());
 
             expect($result)->toBe(0);
         });

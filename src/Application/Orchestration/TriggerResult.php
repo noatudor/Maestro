@@ -43,6 +43,11 @@ final readonly class TriggerResult
         return $this->success;
     }
 
+    public function isTerminal(): bool
+    {
+        return $this->workflowInstance->isTerminal();
+    }
+
     public function workflow(): WorkflowInstance
     {
         return $this->workflowInstance;

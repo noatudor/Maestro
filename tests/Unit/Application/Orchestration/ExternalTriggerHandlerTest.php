@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Container\Container;
 use Maestro\Workflow\Application\Context\WorkflowContextProviderFactory;
 use Maestro\Workflow\Application\Dependency\StepDependencyChecker;
-use Maestro\Workflow\Application\Job\DefaultIdempotencyKeyGenerator;
 use Maestro\Workflow\Application\Job\JobDispatchService;
 use Maestro\Workflow\Application\Orchestration\ExternalTriggerHandler;
 use Maestro\Workflow\Application\Orchestration\FailurePolicyHandler;
@@ -42,9 +42,11 @@ describe('ExternalTriggerHandler', function (): void {
         $stepDependencyChecker = new StepDependencyChecker($this->stepOutputRepository);
         $stepOutputStoreFactory = new StepOutputStoreFactory($this->stepOutputRepository);
         $workflowContextProviderFactory = new WorkflowContextProviderFactory($mock);
+        $dispatcherMock = Mockery::mock(Dispatcher::class);
+        $dispatcherMock->shouldReceive('dispatch');
         $jobDispatchService = new JobDispatchService(
+            $dispatcherMock,
             $this->jobLedgerRepository,
-            new DefaultIdempotencyKeyGenerator(),
         );
 
         $stepDispatcher = new StepDispatcher(

@@ -132,4 +132,12 @@ final class InMemoryJobLedgerRepository implements JobLedgerRepository
 
         return new JobRecordCollection(array_values($jobs));
     }
+
+    public function deleteByWorkflowId(WorkflowId $workflowId): void
+    {
+        $this->jobs = array_filter(
+            $this->jobs,
+            static fn (JobRecord $jobRecord): bool => $jobRecord->workflowId->value !== $workflowId->value,
+        );
+    }
 }

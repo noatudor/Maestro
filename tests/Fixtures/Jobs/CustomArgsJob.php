@@ -9,15 +9,15 @@ use Maestro\Workflow\ValueObjects\StepRunId;
 use Maestro\Workflow\ValueObjects\WorkflowId;
 
 /**
- * Test job for fan-out scenarios that processes an individual item.
+ * Test job for fan-out scenarios with custom job arguments factory.
  */
-final class ProcessItemJob extends OrchestratedJob
+final class CustomArgsJob extends OrchestratedJob
 {
     public function __construct(
         WorkflowId $workflowId,
         StepRunId $stepRunId,
         string $jobUuid,
-        public readonly mixed $item,
+        public readonly mixed $custom,
     ) {
         parent::__construct($workflowId, $stepRunId, $jobUuid);
     }

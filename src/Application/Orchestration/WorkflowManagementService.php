@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Maestro\Workflow\Application\Orchestration;
 
+use Maestro\Workflow\Contracts\WorkflowManager;
 use Maestro\Workflow\Contracts\WorkflowRepository;
 use Maestro\Workflow\Definition\WorkflowDefinitionRegistry;
 use Maestro\Workflow\Domain\WorkflowInstance;
@@ -22,7 +23,7 @@ use Maestro\Workflow\ValueObjects\WorkflowId;
  * Provides the public API for starting, pausing, resuming,
  * cancelling, and retrying workflows.
  */
-final readonly class WorkflowManagementService
+final readonly class WorkflowManagementService implements WorkflowManager
 {
     public function __construct(
         private WorkflowRepository $workflowRepository,

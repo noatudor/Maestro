@@ -209,6 +209,13 @@ final readonly class EloquentStepRunRepository implements StepRunRepository
         return $affected > 0;
     }
 
+    public function deleteByWorkflowId(WorkflowId $workflowId): void
+    {
+        StepRunModel::query()
+            ->forWorkflow($workflowId->value)
+            ->delete();
+    }
+
     /**
      * @param array<int|string, StepRunModel> $models
      *

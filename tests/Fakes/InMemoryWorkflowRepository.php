@@ -102,6 +102,18 @@ final class InMemoryWorkflowRepository implements WorkflowRepository
     }
 
     /**
+     * @return list<WorkflowInstance>
+     */
+    public function findTerminalBefore(CarbonImmutable $threshold): array
+    {
+        return array_values(array_filter(
+            $this->workflows,
+            static fn (WorkflowInstance $workflowInstance): bool => $workflowInstance->isTerminal()
+                && $workflowInstance->updatedAt()->lessThan($threshold),
+        ));
+    }
+
+    /**
      * @throws WorkflowNotFoundException
      * @throws WorkflowLockedException
      */

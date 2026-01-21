@@ -22,7 +22,7 @@ enum WorkflowState: string
     {
         return match ($this) {
             self::Pending => $target === self::Running,
-            self::Running => in_array($target, [self::Paused, self::Succeeded, self::Failed], true),
+            self::Running => in_array($target, [self::Paused, self::Succeeded, self::Failed, self::Cancelled], true),
             self::Paused => in_array($target, [self::Running, self::Cancelled], true),
             self::Failed => in_array($target, [self::Running, self::Cancelled], true),
             self::Succeeded, self::Cancelled => false,

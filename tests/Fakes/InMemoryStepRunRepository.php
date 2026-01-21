@@ -150,6 +150,14 @@ class InMemoryStepRunRepository implements StepRunRepository
         return true;
     }
 
+    public function deleteByWorkflowId(WorkflowId $workflowId): void
+    {
+        $this->stepRuns = array_filter(
+            $this->stepRuns,
+            static fn (StepRun $stepRun): bool => $stepRun->workflowId->value !== $workflowId->value,
+        );
+    }
+
     /**
      * @return list<StepRun>
      */
