@@ -88,4 +88,30 @@ describe('StepTimeout', static function (): void {
             expect($stepTimeout->equals($b))->toBeFalse();
         });
     });
+
+    describe('hasAnyTimeout', static function (): void {
+        it('returns true when step timeout is set', function (): void {
+            $stepTimeout = StepTimeout::stepOnly(300);
+
+            expect($stepTimeout->hasAnyTimeout())->toBeTrue();
+        });
+
+        it('returns true when job timeout is set', function (): void {
+            $stepTimeout = StepTimeout::jobOnly(60);
+
+            expect($stepTimeout->hasAnyTimeout())->toBeTrue();
+        });
+
+        it('returns true when both timeouts are set', function (): void {
+            $stepTimeout = StepTimeout::create(300, 60);
+
+            expect($stepTimeout->hasAnyTimeout())->toBeTrue();
+        });
+
+        it('returns false when no timeout is set', function (): void {
+            $stepTimeout = StepTimeout::none();
+
+            expect($stepTimeout->hasAnyTimeout())->toBeFalse();
+        });
+    });
 });

@@ -89,4 +89,19 @@ describe('WorkflowDefinitionBuilder', static function (): void {
             expect($workflowDefinition->stepCount())->toBe(3);
         });
     });
+
+    describe('addStep', static function (): void {
+        it('adds step definition directly', function (): void {
+            $singleJobStepDefinition = SingleJobStepBuilder::create('direct-step')
+                ->job(TestJob::class)
+                ->build();
+
+            $workflowDefinition = WorkflowDefinitionBuilder::create('test')
+                ->addStep($singleJobStepDefinition)
+                ->build();
+
+            expect($workflowDefinition->stepCount())->toBe(1);
+            expect($workflowDefinition->getFirstStep()->key()->toString())->toBe('direct-step');
+        });
+    });
 });

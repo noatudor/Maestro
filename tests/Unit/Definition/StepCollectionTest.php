@@ -217,4 +217,39 @@ describe('StepCollection', static function (): void {
             expect($this->collection->every(static fn ($step): bool => ! $step->hasRequirements()))->toBeTrue();
         });
     });
+
+    describe('isNotEmpty', static function (): void {
+        it('returns true for non-empty collection', function (): void {
+            expect($this->collection->isNotEmpty())->toBeTrue();
+        });
+
+        it('returns false for empty collection', function (): void {
+            expect(StepCollection::empty()->isNotEmpty())->toBeFalse();
+        });
+    });
+
+    describe('all', static function (): void {
+        it('returns all steps', function (): void {
+            $all = $this->collection->all();
+
+            expect($all)->toHaveCount(3);
+            expect($all[0]->key()->toString())->toBe('step-one');
+        });
+    });
+
+    describe('stepsAfter for non-existent key', static function (): void {
+        it('returns empty for non-existent key', function (): void {
+            $after = $this->collection->stepsAfter(StepKey::fromString('non-existent'));
+
+            expect($after->isEmpty())->toBeTrue();
+        });
+    });
+
+    describe('stepsBefore for non-existent key', static function (): void {
+        it('returns empty for non-existent key', function (): void {
+            $before = $this->collection->stepsBefore(StepKey::fromString('non-existent'));
+
+            expect($before->isEmpty())->toBeTrue();
+        });
+    });
 });

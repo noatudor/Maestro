@@ -137,4 +137,53 @@ describe('JobLifecycleMiddleware', function (): void {
 
         expect($executed)->toBeFalse();
     });
+
+    it('truncates long error messages', function (): void {
+        $job = new TestOrchestratedJob($this->workflowId, $this->stepRunId, $this->jobUuid);
+
+        $jobRecord = JobRecord::create(
+            $this->workflowId,
+            $this->stepRunId,
+            $this->jobUuid,
+            TestOrchestratedJob::class,
+            'default',
+        );
+        $this->repository->save($jobRecord);
+
+        $longMessage = str_repeat('A', 70000);
+
+        try {
+            $this->middleware->handle($job, static fn () => throw new RuntimeException($longMessage));
+        } catch (RuntimeException) {
+            // Expected
+        }
+
+        $updatedJob = $this->repository->findByJobUuid($this->jobUuid);
+
+        expect(mb_strlen((string) $updatedJob->failureMessage()))->toBeLessThanOrEqual(65535);
+        expect($updatedJob->failureMessage())->toEndWith('...');
+    });
+
+    it('truncates long stack traces', function (): void {
+        $job = new TestOrchestratedJob($this->workflowId, $this->stepRunId, $this->jobUuid);
+
+        $jobRecord = JobRecord::create(
+            $this->workflowId,
+            $this->stepRunId,
+            $this->jobUuid,
+            TestOrchestratedJob::class,
+            'default',
+        );
+        $this->repository->save($jobRecord);
+
+        try {
+            $this->middleware->handle($job, static fn () => throw new RuntimeException('Test error'));
+        } catch (RuntimeException) {
+            // Expected
+        }
+
+        $updatedJob = $this->repository->findByJobUuid($this->jobUuid);
+
+        expect($updatedJob->failureTrace())->not->toBeNull();
+    });
 });

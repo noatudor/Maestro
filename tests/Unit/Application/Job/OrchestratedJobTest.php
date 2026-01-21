@@ -10,6 +10,7 @@ use Maestro\Workflow\Definition\WorkflowDefinition;
 use Maestro\Workflow\Tests\Fakes\InMemoryStepOutputRepository;
 use Maestro\Workflow\Tests\Fixtures\Jobs\TestOrchestratedJob;
 use Maestro\Workflow\Tests\Fixtures\Outputs\TestOutput;
+use Maestro\Workflow\Tests\Fixtures\TestWorkflowContext;
 use Maestro\Workflow\ValueObjects\DefinitionKey;
 use Maestro\Workflow\ValueObjects\DefinitionVersion;
 use Maestro\Workflow\ValueObjects\StepRunId;
@@ -138,5 +139,36 @@ describe('OrchestratedJob', function (): void {
         $job->setOutputStore($outputStore);
 
         expect($job->getOutputStore())->toBe($outputStore);
+    });
+
+    it('returns null from context when no context provider is set', function (): void {
+        $job = new TestOrchestratedJob(
+            $this->workflowId,
+            $this->stepRunId,
+            $this->jobUuid,
+        );
+
+        expect($job->getContext())->toBeNull();
+    });
+
+    it('returns null from contextAs when no context provider is set', function (): void {
+        $job = new class($this->workflowId, $this->stepRunId, $this->jobUuid) extends TestOrchestratedJob
+        {
+            public function getContextAs(string $contextClass): mixed
+            {
+                $reflection = new ReflectionClass($this);
+                $parentClass = $reflection->getParentClass();
+                $reflectionMethod = $parentClass->getMethod('contextAs');
+
+                return $reflectionMethod->invoke($this, $contextClass);
+            }
+
+            protected function execute(): void
+            {
+                $this->executed = true;
+            }
+        };
+
+        expect($job->getContextAs(TestWorkflowContext::class))->toBeNull();
     });
 });

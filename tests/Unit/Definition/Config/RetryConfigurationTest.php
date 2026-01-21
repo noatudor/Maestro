@@ -164,4 +164,40 @@ describe('RetryConfiguration', static function (): void {
             expect($retryConfiguration->equals($b))->toBeFalse();
         });
     });
+
+    describe('retriesAllJobs', static function (): void {
+        it('returns true when scope is All', function (): void {
+            $retryConfiguration = RetryConfiguration::create(
+                retryScope: RetryScope::All,
+            );
+
+            expect($retryConfiguration->retriesAllJobs())->toBeTrue();
+        });
+
+        it('returns false when scope is FailedOnly', function (): void {
+            $retryConfiguration = RetryConfiguration::create(
+                retryScope: RetryScope::FailedOnly,
+            );
+
+            expect($retryConfiguration->retriesAllJobs())->toBeFalse();
+        });
+    });
+
+    describe('retriesFailedJobsOnly', static function (): void {
+        it('returns true when scope is FailedOnly', function (): void {
+            $retryConfiguration = RetryConfiguration::create(
+                retryScope: RetryScope::FailedOnly,
+            );
+
+            expect($retryConfiguration->retriesFailedJobsOnly())->toBeTrue();
+        });
+
+        it('returns false when scope is All', function (): void {
+            $retryConfiguration = RetryConfiguration::create(
+                retryScope: RetryScope::All,
+            );
+
+            expect($retryConfiguration->retriesFailedJobsOnly())->toBeFalse();
+        });
+    });
 });

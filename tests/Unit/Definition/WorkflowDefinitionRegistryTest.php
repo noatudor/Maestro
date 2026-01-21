@@ -202,4 +202,42 @@ describe('WorkflowDefinitionRegistry', static function (): void {
             expect($this->registry->count())->toBe(0);
         });
     });
+
+    describe('hasKey', static function (): void {
+        it('returns true when key exists', function (): void {
+            $this->registry->register($this->definition1);
+
+            expect($this->registry->hasKey($this->definition1->key()))->toBeTrue();
+        });
+
+        it('returns false when key does not exist', function (): void {
+            expect($this->registry->hasKey(DefinitionKey::fromString('non-existent')))->toBeFalse();
+        });
+    });
+
+    describe('allLatest', static function (): void {
+        it('returns latest definition for each key', function (): void {
+            $this->registry->register($this->definition1);
+            $this->registry->register($this->definition2);
+            $this->registry->register($this->definition3);
+
+            $latest = $this->registry->allLatest();
+
+            expect($latest)->toHaveCount(2);
+        });
+    });
+
+    describe('countKeys', static function (): void {
+        it('returns count of unique keys', function (): void {
+            $this->registry->register($this->definition1);
+            $this->registry->register($this->definition2);
+            $this->registry->register($this->definition3);
+
+            expect($this->registry->countKeys())->toBe(2);
+        });
+
+        it('returns zero for empty registry', function (): void {
+            expect($this->registry->countKeys())->toBe(0);
+        });
+    });
 });

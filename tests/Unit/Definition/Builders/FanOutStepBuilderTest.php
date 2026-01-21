@@ -115,4 +115,148 @@ describe('FanOutStepBuilder', static function (): void {
             expect($fanOutStepDefinition->successCriteria()->minimumRequired)->toBe(3);
         });
     });
+
+    describe('failure policy shortcuts', static function (): void {
+        it('sets failWorkflow policy', function (): void {
+            $fanOutStepDefinition = FanOutStepBuilder::create('test')
+                ->job(ProcessItemJob::class)
+                ->iterateOver(static fn (): array => [])
+                ->failWorkflow()
+                ->build();
+
+            expect($fanOutStepDefinition->failurePolicy())->toBe(FailurePolicy::FailWorkflow);
+        });
+
+        it('sets pauseWorkflow policy', function (): void {
+            $fanOutStepDefinition = FanOutStepBuilder::create('test')
+                ->job(ProcessItemJob::class)
+                ->iterateOver(static fn (): array => [])
+                ->pauseWorkflow()
+                ->build();
+
+            expect($fanOutStepDefinition->failurePolicy())->toBe(FailurePolicy::PauseWorkflow);
+        });
+
+        it('sets retryStep policy', function (): void {
+            $fanOutStepDefinition = FanOutStepBuilder::create('test')
+                ->job(ProcessItemJob::class)
+                ->iterateOver(static fn (): array => [])
+                ->retryStep()
+                ->build();
+
+            expect($fanOutStepDefinition->failurePolicy())->toBe(FailurePolicy::RetryStep);
+        });
+
+        it('sets skipStep policy', function (): void {
+            $fanOutStepDefinition = FanOutStepBuilder::create('test')
+                ->job(ProcessItemJob::class)
+                ->iterateOver(static fn (): array => [])
+                ->skipStep()
+                ->build();
+
+            expect($fanOutStepDefinition->failurePolicy())->toBe(FailurePolicy::SkipStep);
+        });
+    });
+
+    describe('retry configuration', static function (): void {
+        it('sets custom retry configuration', function (): void {
+            $fanOutStepDefinition = FanOutStepBuilder::create('test')
+                ->job(ProcessItemJob::class)
+                ->iterateOver(static fn (): array => [])
+                ->retry(5, 120, 3.0, 7200)
+                ->build();
+
+            $retryConfiguration = $fanOutStepDefinition->retryConfiguration();
+            expect($retryConfiguration->maxAttempts)->toBe(5);
+            expect($retryConfiguration->delaySeconds)->toBe(120);
+            expect($retryConfiguration->backoffMultiplier)->toBe(3.0);
+            expect($retryConfiguration->maxDelaySeconds)->toBe(7200);
+        });
+
+        it('disables retry with noRetry', function (): void {
+            $fanOutStepDefinition = FanOutStepBuilder::create('test')
+                ->job(ProcessItemJob::class)
+                ->iterateOver(static fn (): array => [])
+                ->noRetry()
+                ->build();
+
+            expect($fanOutStepDefinition->retryConfiguration()->allowsRetry())->toBeFalse();
+        });
+    });
+
+    describe('timeout configuration', static function (): void {
+        it('sets step timeout', function (): void {
+            $fanOutStepDefinition = FanOutStepBuilder::create('test')
+                ->job(ProcessItemJob::class)
+                ->iterateOver(static fn (): array => [])
+                ->timeout(stepTimeoutSeconds: 600)
+                ->build();
+
+            expect($fanOutStepDefinition->timeout()->stepTimeoutSeconds)->toBe(600);
+        });
+
+        it('sets job timeout', function (): void {
+            $fanOutStepDefinition = FanOutStepBuilder::create('test')
+                ->job(ProcessItemJob::class)
+                ->iterateOver(static fn (): array => [])
+                ->timeout(jobTimeoutSeconds: 120)
+                ->build();
+
+            expect($fanOutStepDefinition->timeout()->jobTimeoutSeconds)->toBe(120);
+        });
+    });
+
+    describe('queue configuration', static function (): void {
+        it('sets queue name', function (): void {
+            $fanOutStepDefinition = FanOutStepBuilder::create('test')
+                ->job(ProcessItemJob::class)
+                ->iterateOver(static fn (): array => [])
+                ->onQueue('priority')
+                ->build();
+
+            expect($fanOutStepDefinition->queueConfiguration()->queue)->toBe('priority');
+        });
+
+        it('sets connection name', function (): void {
+            $fanOutStepDefinition = FanOutStepBuilder::create('test')
+                ->job(ProcessItemJob::class)
+                ->iterateOver(static fn (): array => [])
+                ->onConnection('sqs')
+                ->build();
+
+            expect($fanOutStepDefinition->queueConfiguration()->connection)->toBe('sqs');
+        });
+
+        it('sets delay', function (): void {
+            $fanOutStepDefinition = FanOutStepBuilder::create('test')
+                ->job(ProcessItemJob::class)
+                ->iterateOver(static fn (): array => [])
+                ->delay(30)
+                ->build();
+
+            expect($fanOutStepDefinition->queueConfiguration()->delaySeconds)->toBe(30);
+        });
+    });
+
+    describe('parallelism edge cases', static function (): void {
+        it('enforces minimum of 1 for parallelism', function (): void {
+            $fanOutStepDefinition = FanOutStepBuilder::create('test')
+                ->job(ProcessItemJob::class)
+                ->iterateOver(static fn (): array => [])
+                ->maxParallel(0)
+                ->build();
+
+            expect($fanOutStepDefinition->parallelismLimit())->toBe(1);
+        });
+
+        it('enforces minimum of 1 for negative parallelism', function (): void {
+            $fanOutStepDefinition = FanOutStepBuilder::create('test')
+                ->job(ProcessItemJob::class)
+                ->iterateOver(static fn (): array => [])
+                ->maxParallel(-5)
+                ->build();
+
+            expect($fanOutStepDefinition->parallelismLimit())->toBe(1);
+        });
+    });
 });
