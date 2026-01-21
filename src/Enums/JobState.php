@@ -19,7 +19,9 @@ enum JobState: string
     public function canTransitionTo(self $target): bool
     {
         return match ($this) {
-            self::Dispatched => $target === self::Running,
+            // Dispatched jobs can transition to Running normally, or directly to Failed
+            // if they were never picked up (stale job detection)
+            self::Dispatched => in_array($target, [self::Running, self::Failed], true),
             self::Running => in_array($target, [self::Succeeded, self::Failed], true),
             self::Succeeded, self::Failed => false,
         };

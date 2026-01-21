@@ -4,19 +4,122 @@ declare(strict_types=1);
 
 namespace Maestro\Workflow\Contracts;
 
+use Maestro\Workflow\Domain\WorkflowInstance;
 use Maestro\Workflow\Enums\WorkflowState;
 use Maestro\Workflow\ValueObjects\WorkflowId;
 
 interface WorkflowRepository
 {
-    public function find(WorkflowId $workflowId): ?object;
+    public function find(WorkflowId $workflowId): ?WorkflowInstance;
 
-    public function save(object $workflow): void;
+    public function save(WorkflowInstance $workflow): void;
 
     public function delete(WorkflowId $workflowId): void;
 
     /**
-     * @return array<string, object>
+     * @return array<string, WorkflowInstance>
      */
     public function findByState(WorkflowState $workflowState): array;
+
+    /**
+     * @throws \Maestro\Workflow\Exceptions\WorkflowNotFoundException
+     */
+    public function findOrFail(WorkflowId $workflowId): WorkflowInstance;
+
+    public function exists(WorkflowId $workflowId): bool;
+
+    /**
+     * @return list<WorkflowInstance>
+     */
+    public function findRunning(): array;
+
+    /**
+     * @return list<WorkflowInstance>
+     */
+    public function findPaused(): array;
+
+    /**
+     * @return list<WorkflowInstance>
+     */
+    public function findFailed(): array;
+
+    /**
+     * @return list<WorkflowInstance>
+     */
+    public function findByDefinitionKey(string $definitionKey): array;
+
+    /**
+     * Acquire a pessimistic lock on the workflow row using SELECT FOR UPDATE.
+     *
+     * This method will wait up to the specified timeout for the lock to become available.
+     * If the lock cannot be acquired within the timeout, it throws WorkflowLockedException.
+     *
+     * @param int $timeoutSeconds Maximum time to wait for lock acquisition
+     *
+     * @throws \Maestro\Workflow\Exceptions\WorkflowNotFoundException
+     * @throws \Maestro\Workflow\Exceptions\WorkflowLockedException
+     */
+    public function findAndLockForUpdate(WorkflowId $workflowId, int $timeoutSeconds = 5): WorkflowInstance;
+
+    /**
+     * Acquire an application-level lock on a workflow.
+     *
+     * This sets the locked_by and locked_at columns atomically.
+     * Returns false if the workflow is already locked by another process.
+     */
+    public function acquireApplicationLock(WorkflowId $workflowId, string $lockId): bool;
+
+    /**
+     * Release an application-level lock on a workflow.
+     *
+     * Only releases the lock if it was acquired by the same lock ID.
+     */
+    public function releaseApplicationLock(WorkflowId $workflowId, string $lockId): bool;
+
+    /**
+     * Check if a workflow's application lock has expired.
+     *
+     * A lock is considered expired if locked_at + lockTimeoutSeconds < now.
+     */
+    public function isLockExpired(WorkflowId $workflowId, int $lockTimeoutSeconds): bool;
+
+    /**
+     * Clear expired application locks.
+     *
+     * This is used by zombie detection to clean up stale locks from crashed processes.
+     *
+     * @return int Number of locks cleared
+     */
+    public function clearExpiredLocks(int $lockTimeoutSeconds): int;
+
+    /**
+     * @deprecated Use acquireApplicationLock() instead
+     */
+    public function lockForUpdate(WorkflowId $workflowId, string $lockId): bool;
+
+    /**
+     * @deprecated Use releaseApplicationLock() instead
+     */
+    public function releaseLock(WorkflowId $workflowId, string $lockId): bool;
+
+    /**
+     * Execute a callback with a workflow locked for update within a transaction.
+     *
+     * This method:
+     * 1. Starts a database transaction
+     * 2. Acquires a row lock on the workflow using SELECT FOR UPDATE
+     * 3. Executes the callback with the locked workflow
+     * 4. Commits the transaction (or rolls back on exception)
+     *
+     * @template TReturn
+     *
+     * @param callable(WorkflowInstance): TReturn $callback
+     * @param int $timeoutSeconds Maximum time to wait for lock acquisition
+     *
+     * @return TReturn
+     *
+     * @throws \Maestro\Workflow\Exceptions\WorkflowNotFoundException
+     * @throws \Maestro\Workflow\Exceptions\WorkflowLockedException
+     */
+    public function withLockedWorkflow(WorkflowId $workflowId, callable $callback, int $timeoutSeconds = 5): mixed;
 }
