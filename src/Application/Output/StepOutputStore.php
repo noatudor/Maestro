@@ -14,6 +14,7 @@ use Maestro\Workflow\ValueObjects\WorkflowId;
  * Provides typed access to step outputs for a specific workflow.
  *
  * Handles reading, writing, and merging of step outputs with proper type safety.
+ * Delegates atomic merge operations to the repository for proper transaction handling.
  */
 final readonly class StepOutputStore
 {
@@ -57,19 +58,15 @@ final readonly class StepOutputStore
     /**
      * Write a step output.
      *
-     * For MergeableOutput instances, if an output of the same type already exists,
-     * it will be merged with the new output before persisting.
+     * For MergeableOutput instances, the repository handles atomic merge operations
+     * with proper transaction and locking to prevent lost updates in fan-out scenarios.
      */
     public function write(StepOutput $output): void
     {
-        $outputClass = $output::class;
+        if ($output instanceof MergeableOutput) {
+            $this->repository->saveWithAtomicMerge($this->workflowId, $output);
 
-        if ($output instanceof MergeableOutput && $this->has($outputClass)) {
-            $existing = $this->repository->find($this->workflowId, $outputClass);
-
-            if ($existing instanceof MergeableOutput) {
-                $output = $existing->mergeWith($output);
-            }
+            return;
         }
 
         $this->repository->save($this->workflowId, $output);

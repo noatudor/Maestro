@@ -22,6 +22,8 @@ use Ramsey\Uuid\Uuid;
  */
 final readonly class WorkflowAdvancer
 {
+    private const int DEFAULT_LOCK_TIMEOUT_SECONDS = 5;
+
     public function __construct(
         private WorkflowRepository $workflowRepository,
         private StepRunRepository $stepRunRepository,
@@ -35,26 +37,50 @@ final readonly class WorkflowAdvancer
      * Evaluate a workflow and advance it if appropriate.
      *
      * This is the main entry point for the orchestration engine.
-     * It acquires a lock, evaluates the workflow state, and takes action.
+     * It uses database-level pessimistic locking (SELECT FOR UPDATE) to prevent
+     * concurrent evaluation of the same workflow.
+     *
+     * @throws WorkflowNotFoundException
+     * @throws DefinitionNotFoundException
+     * @throws WorkflowLockedException
+     * @throws \Maestro\Workflow\Exceptions\InvalidStateTransitionException
+     * @throws \Maestro\Workflow\Exceptions\StepDependencyException
+     */
+    public function evaluate(WorkflowId $workflowId): void
+    {
+        $this->workflowRepository->withLockedWorkflow(
+            $workflowId,
+            fn (WorkflowInstance $workflow) => $this->doEvaluate($workflow),
+            self::DEFAULT_LOCK_TIMEOUT_SECONDS,
+        );
+    }
+
+    /**
+     * Evaluate a workflow with application-level locking (legacy behavior).
+     *
+     * This method uses application-level locks stored in the database columns.
+     * Prefer evaluate() for most use cases as it provides stronger guarantees.
+     *
+     * @deprecated Use evaluate() instead for database-level locking
      *
      * @throws WorkflowNotFoundException
      * @throws DefinitionNotFoundException
      * @throws \Maestro\Workflow\Exceptions\InvalidStateTransitionException
      * @throws \Maestro\Workflow\Exceptions\StepDependencyException
      */
-    public function evaluate(WorkflowId $workflowId): void
+    public function evaluateWithApplicationLock(WorkflowId $workflowId): void
     {
         $lockId = $this->generateLockId();
         $workflow = $this->workflowRepository->findOrFail($workflowId);
 
-        if (! $this->acquireLock($workflow, $lockId)) {
+        if (! $this->acquireApplicationLock($workflow, $lockId)) {
             return;
         }
 
         try {
             $this->doEvaluate($workflow);
         } finally {
-            $this->releaseLock($workflow, $lockId);
+            $this->releaseApplicationLock($workflow, $lockId);
         }
     }
 
@@ -106,7 +132,7 @@ final readonly class WorkflowAdvancer
         if ($stepRun->isRunning()) {
             $finalizationResult = $this->stepFinalizer->tryFinalize($stepRun, $stepDefinition);
 
-            if (! $finalizationResult->isFinalized()) {
+            if (! $finalizationResult->wonRace()) {
                 return;
             }
 
@@ -189,7 +215,7 @@ final readonly class WorkflowAdvancer
         $this->stepDispatcher->dispatchStep($workflow, $nextStep);
     }
 
-    private function acquireLock(WorkflowInstance $workflow, string $lockId): bool
+    private function acquireApplicationLock(WorkflowInstance $workflow, string $lockId): bool
     {
         try {
             $workflow->acquireLock($lockId);
@@ -201,7 +227,7 @@ final readonly class WorkflowAdvancer
         }
     }
 
-    private function releaseLock(WorkflowInstance $workflow, string $lockId): void
+    private function releaseApplicationLock(WorkflowInstance $workflow, string $lockId): void
     {
         $workflow->releaseLock($lockId);
         $this->workflowRepository->save($workflow);

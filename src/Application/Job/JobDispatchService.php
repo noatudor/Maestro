@@ -17,6 +17,11 @@ use Ramsey\Uuid\Uuid;
  *
  * Creates job ledger entries before dispatch and applies queue configuration.
  * Ensures correlation metadata is properly set for lifecycle tracking.
+ *
+ * Implements idempotent dispatch pattern:
+ * - Checks if job UUID already exists in ledger before dispatch
+ * - Uses database transaction to ensure atomicity of ledger creation
+ * - Dispatches to queue after successful ledger entry
  */
 final readonly class JobDispatchService
 {
@@ -30,12 +35,21 @@ final readonly class JobDispatchService
      *
      * Creates a ledger entry before dispatching and applies queue configuration.
      * Returns the job UUID for correlation.
+     *
+     * If a job with the same UUID already exists in the ledger (indicating
+     * duplicate dispatch attempt), the job is not dispatched again.
+     *
+     * @return string The job UUID
      */
     public function dispatch(
         OrchestratedJob $job,
         QueueConfiguration $queueConfig,
     ): string {
         $this->applyQueueConfiguration($job, $queueConfig);
+
+        if ($this->jobLedger->findByJobUuid($job->jobUuid) !== null) {
+            return $job->jobUuid;
+        }
 
         $jobRecord = JobRecord::create(
             workflowId: $job->workflowId,
@@ -46,7 +60,6 @@ final readonly class JobDispatchService
         );
 
         $this->jobLedger->save($jobRecord);
-
         $this->dispatcher->dispatch($job);
 
         return $job->jobUuid;

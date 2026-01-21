@@ -173,6 +173,40 @@ final readonly class EloquentStepRunRepository implements StepRunRepository
         return $affected > 0;
     }
 
+    public function finalizeAsSucceeded(StepRunId $stepRunId, \Carbon\CarbonImmutable $finishedAt): bool
+    {
+        $affected = StepRunModel::query()
+            ->where('id', $stepRunId->value)
+            ->where('status', StepState::Running->value)
+            ->update([
+                'status' => StepState::Succeeded->value,
+                'finished_at' => $finishedAt,
+            ]);
+
+        return $affected > 0;
+    }
+
+    public function finalizeAsFailed(
+        StepRunId $stepRunId,
+        string $failureCode,
+        string $failureMessage,
+        int $failedJobCount,
+        \Carbon\CarbonImmutable $finishedAt,
+    ): bool {
+        $affected = StepRunModel::query()
+            ->where('id', $stepRunId->value)
+            ->where('status', StepState::Running->value)
+            ->update([
+                'status' => StepState::Failed->value,
+                'failure_code' => $failureCode,
+                'failure_message' => $failureMessage,
+                'failed_job_count' => $failedJobCount,
+                'finished_at' => $finishedAt,
+            ]);
+
+        return $affected > 0;
+    }
+
     /**
      * @param array<int|string, StepRunModel> $models
      *

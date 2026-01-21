@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Maestro\Workflow\Infrastructure\Persistence\Repositories;
 
+use Carbon\CarbonImmutable;
 use Maestro\Workflow\Contracts\JobLedgerRepository;
 use Maestro\Workflow\Domain\Collections\JobRecordCollection;
 use Maestro\Workflow\Domain\JobRecord;
@@ -68,12 +69,7 @@ final readonly class EloquentJobLedgerRepository implements JobLedgerRepository
             ->orderBy('dispatched_at')
             ->get();
 
-        return new JobRecordCollection(
-            array_map(
-                fn (JobLedgerModel $model): JobRecord => $this->hydrator->toDomain($model),
-                $models->all(),
-            ),
-        );
+        return new JobRecordCollection($this->hydrateModels($models->all()));
     }
 
     public function findByWorkflowId(WorkflowId $workflowId): JobRecordCollection
@@ -83,12 +79,7 @@ final readonly class EloquentJobLedgerRepository implements JobLedgerRepository
             ->orderBy('dispatched_at')
             ->get();
 
-        return new JobRecordCollection(
-            array_map(
-                fn (JobLedgerModel $model): JobRecord => $this->hydrator->toDomain($model),
-                $models->all(),
-            ),
-        );
+        return new JobRecordCollection($this->hydrateModels($models->all()));
     }
 
     public function findByStepRunIdAndState(StepRunId $stepRunId, JobState $state): JobRecordCollection
@@ -98,12 +89,7 @@ final readonly class EloquentJobLedgerRepository implements JobLedgerRepository
             ->where('status', $state->value)
             ->get();
 
-        return new JobRecordCollection(
-            array_map(
-                fn (JobLedgerModel $model): JobRecord => $this->hydrator->toDomain($model),
-                $models->all(),
-            ),
-        );
+        return new JobRecordCollection($this->hydrateModels($models->all()));
     }
 
     public function countByStepRunId(StepRunId $stepRunId): int
@@ -160,12 +146,7 @@ final readonly class EloquentJobLedgerRepository implements JobLedgerRepository
             ->inProgress()
             ->get();
 
-        return new JobRecordCollection(
-            array_map(
-                fn (JobLedgerModel $model): JobRecord => $this->hydrator->toDomain($model),
-                $models->all(),
-            ),
-        );
+        return new JobRecordCollection($this->hydrateModels($models->all()));
     }
 
     public function updateStatusAtomically(JobId $jobId, JobState $fromState, JobState $toState): bool
@@ -186,5 +167,38 @@ final readonly class EloquentJobLedgerRepository implements JobLedgerRepository
             ->count();
 
         return $inProgressCount === 0;
+    }
+
+    public function findZombieJobs(CarbonImmutable $threshold): JobRecordCollection
+    {
+        $models = JobLedgerModel::query()
+            ->zombies($threshold)
+            ->get();
+
+        return new JobRecordCollection($this->hydrateModels($models->all()));
+    }
+
+    public function findStaleDispatchedJobs(CarbonImmutable $threshold): JobRecordCollection
+    {
+        $models = JobLedgerModel::query()
+            ->staleDispatched($threshold)
+            ->get();
+
+        return new JobRecordCollection($this->hydrateModels($models->all()));
+    }
+
+    /**
+     * @param array<int|string, JobLedgerModel> $models
+     *
+     * @return list<JobRecord>
+     */
+    private function hydrateModels(array $models): array
+    {
+        $result = [];
+        foreach ($models as $model) {
+            $result[] = $this->hydrator->toDomain($model);
+        }
+
+        return $result;
     }
 }

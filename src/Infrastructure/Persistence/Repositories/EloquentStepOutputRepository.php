@@ -4,14 +4,23 @@ declare(strict_types=1);
 
 namespace Maestro\Workflow\Infrastructure\Persistence\Repositories;
 
+use Illuminate\Database\Connection;
+use Maestro\Workflow\Contracts\MergeableOutput;
+use Maestro\Workflow\Contracts\OutputSerializer;
 use Maestro\Workflow\Contracts\StepOutput;
 use Maestro\Workflow\Contracts\StepOutputRepository;
+use Maestro\Workflow\Exceptions\SerializationException;
 use Maestro\Workflow\Infrastructure\Persistence\Models\StepOutputModel;
 use Maestro\Workflow\ValueObjects\WorkflowId;
 use Ramsey\Uuid\Uuid;
 
 final readonly class EloquentStepOutputRepository implements StepOutputRepository
 {
+    public function __construct(
+        private OutputSerializer $serializer,
+        private Connection $connection,
+    ) {}
+
     /**
      * @template T of StepOutput
      *
@@ -30,7 +39,37 @@ final readonly class EloquentStepOutputRepository implements StepOutputRepositor
             return null;
         }
 
-        return $this->deserialize($model->payload, $outputClass);
+        try {
+            return $this->serializer->deserialize($model->payload, $outputClass);
+        } catch (SerializationException) {
+            return null;
+        }
+    }
+
+    /**
+     * @template T of StepOutput
+     *
+     * @param class-string<T> $outputClass
+     *
+     * @return T|null
+     */
+    public function findForUpdate(WorkflowId $workflowId, string $outputClass): ?StepOutput
+    {
+        $model = StepOutputModel::query()
+            ->where('workflow_id', $workflowId->value)
+            ->where('output_class', $outputClass)
+            ->lockForUpdate()
+            ->first();
+
+        if ($model === null) {
+            return null;
+        }
+
+        try {
+            return $this->serializer->deserialize($model->payload, $outputClass);
+        } catch (SerializationException) {
+            return null;
+        }
     }
 
     /**
@@ -57,9 +96,25 @@ final readonly class EloquentStepOutputRepository implements StepOutputRepositor
             [
                 'id' => Uuid::uuid7()->toString(),
                 'step_key' => $stepKey->value,
-                'payload' => $this->serialize($output),
+                'payload' => $this->serializer->serialize($output),
             ],
         );
+    }
+
+    public function saveWithAtomicMerge(WorkflowId $workflowId, MergeableOutput $output): void
+    {
+        $outputClass = $output::class;
+
+        $this->connection->transaction(function () use ($workflowId, $output, $outputClass): void {
+            $existing = $this->findForUpdate($workflowId, $outputClass);
+
+            $finalOutput = $output;
+            if ($existing instanceof MergeableOutput) {
+                $finalOutput = $existing->mergeWith($output);
+            }
+
+            $this->save($workflowId, $finalOutput);
+        });
     }
 
     /**
@@ -73,9 +128,13 @@ final readonly class EloquentStepOutputRepository implements StepOutputRepositor
 
         $outputs = [];
         foreach ($models as $model) {
-            $output = $this->deserializeAny($model->payload, $model->output_class);
-            if ($output !== null) {
-                $outputs[] = $output;
+            /** @var class-string<StepOutput> $outputClass */
+            $outputClass = $model->output_class;
+
+            try {
+                $outputs[] = $this->serializer->deserialize($model->payload, $outputClass);
+            } catch (SerializationException) {
+                continue;
             }
         }
 
@@ -112,50 +171,16 @@ final readonly class EloquentStepOutputRepository implements StepOutputRepositor
 
         $outputs = [];
         foreach ($models as $model) {
-            $output = $this->deserializeAny($model->payload, $model->output_class);
-            if ($output !== null) {
-                $outputs[] = $output;
+            /** @var class-string<StepOutput> $outputClass */
+            $outputClass = $model->output_class;
+
+            try {
+                $outputs[] = $this->serializer->deserialize($model->payload, $outputClass);
+            } catch (SerializationException) {
+                continue;
             }
         }
 
         return $outputs;
-    }
-
-    private function serialize(StepOutput $output): string
-    {
-        return serialize($output);
-    }
-
-    /**
-     * @template T of StepOutput
-     *
-     * @param class-string<T> $outputClass
-     *
-     * @return T|null
-     */
-    private function deserialize(string $payload, string $outputClass): ?StepOutput
-    {
-        $output = unserialize($payload);
-
-        if (! $output instanceof $outputClass) {
-            return null;
-        }
-
-        return $output;
-    }
-
-    private function deserializeAny(string $payload, string $outputClass): ?StepOutput
-    {
-        $output = unserialize($payload);
-
-        if (! $output instanceof StepOutput) {
-            return null;
-        }
-
-        if ($output::class !== $outputClass) {
-            return null;
-        }
-
-        return $output;
     }
 }

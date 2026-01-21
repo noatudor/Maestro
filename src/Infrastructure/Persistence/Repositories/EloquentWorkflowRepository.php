@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Maestro\Workflow\Infrastructure\Persistence\Repositories;
 
+use Carbon\CarbonImmutable;
+use Illuminate\Database\Connection;
 use Maestro\Workflow\Contracts\WorkflowRepository;
 use Maestro\Workflow\Domain\WorkflowInstance;
 use Maestro\Workflow\Enums\WorkflowState;
+use Maestro\Workflow\Exceptions\WorkflowLockedException;
 use Maestro\Workflow\Exceptions\WorkflowNotFoundException;
 use Maestro\Workflow\Infrastructure\Persistence\Hydrators\WorkflowHydrator;
 use Maestro\Workflow\Infrastructure\Persistence\Models\WorkflowModel;
@@ -16,6 +19,7 @@ final readonly class EloquentWorkflowRepository implements WorkflowRepository
 {
     public function __construct(
         private WorkflowHydrator $hydrator,
+        private Connection $connection,
     ) {}
 
     /**
@@ -153,20 +157,53 @@ final readonly class EloquentWorkflowRepository implements WorkflowRepository
         return $this->hydrateModels($models->all());
     }
 
-    public function lockForUpdate(WorkflowId $workflowId, string $lockId): bool
+    /**
+     * @throws WorkflowNotFoundException
+     * @throws WorkflowLockedException
+     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionKeyException
+     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionVersionException
+     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     */
+    public function findAndLockForUpdate(WorkflowId $workflowId, int $timeoutSeconds = 5): WorkflowInstance
     {
+        $this->setLockTimeout($timeoutSeconds);
+
+        try {
+            $model = WorkflowModel::query()
+                ->where('id', $workflowId->value)
+                ->lockForUpdate()
+                ->first();
+        } catch (\Illuminate\Database\QueryException $e) {
+            if ($this->isLockTimeoutException($e)) {
+                throw WorkflowLockedException::lockTimeout($workflowId);
+            }
+
+            throw $e;
+        }
+
+        if ($model === null) {
+            throw WorkflowNotFoundException::withId($workflowId);
+        }
+
+        return $this->hydrator->toDomain($model);
+    }
+
+    public function acquireApplicationLock(WorkflowId $workflowId, string $lockId): bool
+    {
+        $now = CarbonImmutable::now();
+
         $affected = WorkflowModel::query()
             ->where('id', $workflowId->value)
             ->whereNull('locked_by')
             ->update([
                 'locked_by' => $lockId,
-                'locked_at' => now(),
+                'locked_at' => $now,
             ]);
 
         return $affected > 0;
     }
 
-    public function releaseLock(WorkflowId $workflowId, string $lockId): bool
+    public function releaseApplicationLock(WorkflowId $workflowId, string $lockId): bool
     {
         $affected = WorkflowModel::query()
             ->where('id', $workflowId->value)
@@ -177,6 +214,94 @@ final readonly class EloquentWorkflowRepository implements WorkflowRepository
             ]);
 
         return $affected > 0;
+    }
+
+    public function isLockExpired(WorkflowId $workflowId, int $lockTimeoutSeconds): bool
+    {
+        $model = WorkflowModel::query()
+            ->where('id', $workflowId->value)
+            ->first();
+
+        if ($model === null || $model->locked_at === null) {
+            return false;
+        }
+
+        $expiresAt = $model->locked_at->addSeconds($lockTimeoutSeconds);
+
+        return CarbonImmutable::now()->isAfter($expiresAt);
+    }
+
+    public function clearExpiredLocks(int $lockTimeoutSeconds): int
+    {
+        $expiryThreshold = CarbonImmutable::now()->subSeconds($lockTimeoutSeconds);
+
+        return WorkflowModel::query()
+            ->whereNotNull('locked_by')
+            ->where('locked_at', '<', $expiryThreshold)
+            ->update([
+                'locked_by' => null,
+                'locked_at' => null,
+            ]);
+    }
+
+    /**
+     * @deprecated Use acquireApplicationLock() instead
+     */
+    public function lockForUpdate(WorkflowId $workflowId, string $lockId): bool
+    {
+        return $this->acquireApplicationLock($workflowId, $lockId);
+    }
+
+    /**
+     * @deprecated Use releaseApplicationLock() instead
+     */
+    public function releaseLock(WorkflowId $workflowId, string $lockId): bool
+    {
+        return $this->releaseApplicationLock($workflowId, $lockId);
+    }
+
+    /**
+     * @template TReturn
+     *
+     * @param callable(WorkflowInstance): TReturn $callback
+     *
+     * @return TReturn
+     *
+     * @throws WorkflowNotFoundException
+     * @throws WorkflowLockedException
+     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionKeyException
+     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionVersionException
+     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     */
+    public function withLockedWorkflow(WorkflowId $workflowId, callable $callback, int $timeoutSeconds = 5): mixed
+    {
+        return $this->connection->transaction(function () use ($workflowId, $callback, $timeoutSeconds) {
+            $workflow = $this->findAndLockForUpdate($workflowId, $timeoutSeconds);
+
+            return $callback($workflow);
+        });
+    }
+
+    private function setLockTimeout(int $timeoutSeconds): void
+    {
+        $driver = $this->connection->getDriverName();
+
+        match ($driver) {
+            'mysql' => $this->connection->statement("SET innodb_lock_wait_timeout = {$timeoutSeconds}"),
+            'pgsql' => $this->connection->statement("SET lock_timeout = '{$timeoutSeconds}s'"),
+            default => null,
+        };
+    }
+
+    private function isLockTimeoutException(\Illuminate\Database\QueryException $e): bool
+    {
+        $driver = $this->connection->getDriverName();
+
+        return match ($driver) {
+            'mysql' => str_contains($e->getMessage(), 'Lock wait timeout exceeded'),
+            'pgsql' => str_contains($e->getMessage(), 'lock timeout'),
+            default => false,
+        };
     }
 
     /**

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Maestro\Workflow\Application\Orchestration;
 
+use Carbon\CarbonImmutable;
 use Maestro\Workflow\Contracts\FanOutStep;
 use Maestro\Workflow\Contracts\JobLedgerRepository;
 use Maestro\Workflow\Contracts\StepDefinition;
@@ -11,13 +12,12 @@ use Maestro\Workflow\Contracts\StepRunRepository;
 use Maestro\Workflow\Definition\Config\NOfMCriteria;
 use Maestro\Workflow\Domain\StepRun;
 use Maestro\Workflow\Enums\JobState;
-use Maestro\Workflow\Enums\SuccessCriteria;
 
 /**
  * Handles step finalization when all jobs are complete.
  *
  * Checks if all jobs for a step run have completed, evaluates success criteria,
- * and transitions the step to its terminal state.
+ * and transitions the step to its terminal state using atomic operations.
  */
 final readonly class StepFinalizer
 {
@@ -29,9 +29,11 @@ final readonly class StepFinalizer
     /**
      * Try to finalize a step if all jobs are complete.
      *
-     * Returns a result indicating whether finalization occurred and the updated step run.
+     * Uses atomic database operations to prevent race conditions in fan-in scenarios.
+     * Only one worker will successfully finalize the step; others will receive
+     * a result indicating they did not win the race.
      *
-     * @throws \Maestro\Workflow\Exceptions\InvalidStateTransitionException
+     * @return StepFinalizationResult Result indicating whether this worker finalized the step
      */
     public function tryFinalize(StepRun $stepRun, StepDefinition $stepDefinition): StepFinalizationResult
     {
@@ -46,19 +48,33 @@ final readonly class StepFinalizer
         }
 
         $success = $this->evaluateSuccess($stepDefinition, $jobStats);
+        $finishedAt = CarbonImmutable::now();
 
         if ($success) {
-            $stepRun->succeed();
+            $finalized = $this->stepRunRepository->finalizeAsSucceeded(
+                $stepRun->id,
+                $finishedAt,
+            );
         } else {
-            $stepRun->fail(
+            $finalized = $this->stepRunRepository->finalizeAsFailed(
+                $stepRun->id,
                 'STEP_FAILED',
                 $this->buildFailureMessage($jobStats),
+                $jobStats->failed,
+                $finishedAt,
             );
         }
 
-        $this->stepRunRepository->save($stepRun);
+        if (! $finalized) {
+            return StepFinalizationResult::alreadyFinalized($stepRun);
+        }
 
-        return StepFinalizationResult::finalized($stepRun);
+        $updatedStepRun = $this->stepRunRepository->find($stepRun->id);
+        if ($updatedStepRun === null) {
+            return StepFinalizationResult::alreadyFinalized($stepRun);
+        }
+
+        return StepFinalizationResult::finalized($updatedStepRun);
     }
 
     /**
