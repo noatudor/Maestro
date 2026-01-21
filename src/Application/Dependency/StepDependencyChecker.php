@@ -17,27 +17,21 @@ use Maestro\Workflow\ValueObjects\WorkflowId;
 final readonly class StepDependencyChecker
 {
     public function __construct(
-        private StepOutputRepository $outputRepository,
+        private StepOutputRepository $stepOutputRepository,
     ) {}
 
     /**
      * Check if all dependencies for a step are satisfied.
      */
-    public function areDependenciesMet(WorkflowId $workflowId, StepDefinition $step): bool
+    public function areDependenciesMet(WorkflowId $workflowId, StepDefinition $stepDefinition): bool
     {
-        $requiredOutputs = $step->requires();
+        $requiredOutputs = $stepDefinition->requires();
 
         if ($requiredOutputs === []) {
             return true;
         }
 
-        foreach ($requiredOutputs as $outputClass) {
-            if (! $this->outputRepository->has($workflowId, $outputClass)) {
-                return false;
-            }
-        }
-
-        return true;
+        return array_all($requiredOutputs, fn (string $outputClass): bool => $this->stepOutputRepository->has($workflowId, $outputClass));
     }
 
     /**
@@ -45,12 +39,12 @@ final readonly class StepDependencyChecker
      *
      * @return list<class-string<StepOutput>>
      */
-    public function getMissingDependencies(WorkflowId $workflowId, StepDefinition $step): array
+    public function getMissingDependencies(WorkflowId $workflowId, StepDefinition $stepDefinition): array
     {
         $missing = [];
 
-        foreach ($step->requires() as $outputClass) {
-            if (! $this->outputRepository->has($workflowId, $outputClass)) {
+        foreach ($stepDefinition->requires() as $outputClass) {
+            if (! $this->stepOutputRepository->has($workflowId, $outputClass)) {
                 $missing[] = $outputClass;
             }
         }
@@ -63,12 +57,12 @@ final readonly class StepDependencyChecker
      *
      * @return list<class-string<StepOutput>>
      */
-    public function getSatisfiedDependencies(WorkflowId $workflowId, StepDefinition $step): array
+    public function getSatisfiedDependencies(WorkflowId $workflowId, StepDefinition $stepDefinition): array
     {
         $satisfied = [];
 
-        foreach ($step->requires() as $outputClass) {
-            if ($this->outputRepository->has($workflowId, $outputClass)) {
+        foreach ($stepDefinition->requires() as $outputClass) {
+            if ($this->stepOutputRepository->has($workflowId, $outputClass)) {
                 $satisfied[] = $outputClass;
             }
         }

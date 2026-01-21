@@ -7,7 +7,9 @@ namespace Maestro\Workflow\Infrastructure\Persistence\Models;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Query\Builder;
 use Maestro\Workflow\Infrastructure\Persistence\QueryBuilders\JobLedgerQueryBuilder;
+use Override;
 
 /**
  * @property string $id
@@ -59,8 +61,9 @@ final class JobLedgerModel extends Model
     ];
 
     /**
-     * @param \Illuminate\Database\Query\Builder $query
+     * @param Builder $query
      */
+    #[Override]
     public function newEloquentBuilder($query): JobLedgerQueryBuilder
     {
         return new JobLedgerQueryBuilder($query);

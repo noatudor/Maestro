@@ -12,9 +12,9 @@ final class InvalidWorkflowDefinitionException extends ConfigurationException
 {
     private const int CODE = 5003;
 
-    public static function fromValidationResult(ValidationResult $result): self
+    public static function fromValidationResult(ValidationResult $validationResult): self
     {
-        $messages = $result->errorMessages();
+        $messages = $validationResult->errorMessages();
         $message = count($messages) === 1
             ? $messages[0]
             : 'Workflow definition validation failed: '.implode('; ', $messages);

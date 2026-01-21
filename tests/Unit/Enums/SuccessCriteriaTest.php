@@ -10,8 +10,8 @@ describe('SuccessCriteria', static function (): void {
             expect(SuccessCriteria::All->requiresAllJobs())->toBeTrue();
         });
 
-        it('returns false for other criteria', function (SuccessCriteria $criteria): void {
-            expect($criteria->requiresAllJobs())->toBeFalse();
+        it('returns false for other criteria', function (SuccessCriteria $successCriteria): void {
+            expect($successCriteria->requiresAllJobs())->toBeFalse();
         })->with([
             'Majority' => SuccessCriteria::Majority,
             'BestEffort' => SuccessCriteria::BestEffort,
@@ -23,8 +23,8 @@ describe('SuccessCriteria', static function (): void {
             expect(SuccessCriteria::Majority->requiresMajority())->toBeTrue();
         });
 
-        it('returns false for other criteria', function (SuccessCriteria $criteria): void {
-            expect($criteria->requiresMajority())->toBeFalse();
+        it('returns false for other criteria', function (SuccessCriteria $successCriteria): void {
+            expect($successCriteria->requiresMajority())->toBeFalse();
         })->with([
             'All' => SuccessCriteria::All,
             'BestEffort' => SuccessCriteria::BestEffort,
@@ -36,8 +36,8 @@ describe('SuccessCriteria', static function (): void {
             expect(SuccessCriteria::BestEffort->allowsAnySuccess())->toBeTrue();
         });
 
-        it('returns false for other criteria', function (SuccessCriteria $criteria): void {
-            expect($criteria->allowsAnySuccess())->toBeFalse();
+        it('returns false for other criteria', function (SuccessCriteria $successCriteria): void {
+            expect($successCriteria->allowsAnySuccess())->toBeFalse();
         })->with([
             'All' => SuccessCriteria::All,
             'Majority' => SuccessCriteria::Majority,
@@ -45,8 +45,8 @@ describe('SuccessCriteria', static function (): void {
     });
 
     describe('evaluate', static function (): void {
-        it('returns true for empty total', function (SuccessCriteria $criteria): void {
-            expect($criteria->evaluate(0, 0))->toBeTrue();
+        it('returns true for empty total', function (SuccessCriteria $successCriteria): void {
+            expect($successCriteria->evaluate(0, 0))->toBeTrue();
         })->with([
             'All' => SuccessCriteria::All,
             'Majority' => SuccessCriteria::Majority,

@@ -20,10 +20,10 @@ final readonly class WorkflowDefinition
      * @param class-string<ContextLoader>|null $contextLoaderClass
      */
     private function __construct(
-        private DefinitionKey $key,
-        private DefinitionVersion $version,
+        private DefinitionKey $definitionKey,
+        private DefinitionVersion $definitionVersion,
         private string $displayName,
-        private StepCollection $steps,
+        private StepCollection $stepCollection,
         private ?string $contextLoaderClass,
     ) {}
 
@@ -31,23 +31,23 @@ final readonly class WorkflowDefinition
      * @param class-string<ContextLoader>|null $contextLoaderClass
      */
     public static function create(
-        DefinitionKey $key,
-        DefinitionVersion $version,
+        DefinitionKey $definitionKey,
+        DefinitionVersion $definitionVersion,
         string $displayName,
-        StepCollection $steps,
+        StepCollection $stepCollection,
         ?string $contextLoaderClass = null,
     ): self {
-        return new self($key, $version, $displayName, $steps, $contextLoaderClass);
+        return new self($definitionKey, $definitionVersion, $displayName, $stepCollection, $contextLoaderClass);
     }
 
     public function key(): DefinitionKey
     {
-        return $this->key;
+        return $this->definitionKey;
     }
 
     public function version(): DefinitionVersion
     {
-        return $this->version;
+        return $this->definitionVersion;
     }
 
     public function displayName(): string
@@ -57,7 +57,7 @@ final readonly class WorkflowDefinition
 
     public function steps(): StepCollection
     {
-        return $this->steps;
+        return $this->stepCollection;
     }
 
     /**
@@ -73,34 +73,34 @@ final readonly class WorkflowDefinition
         return $this->contextLoaderClass !== null;
     }
 
-    public function getStep(StepKey $key): ?StepDefinition
+    public function getStep(StepKey $stepKey): ?StepDefinition
     {
-        return $this->steps->findByKey($key);
+        return $this->stepCollection->findByKey($stepKey);
     }
 
-    public function hasStep(StepKey $key): bool
+    public function hasStep(StepKey $stepKey): bool
     {
-        return $this->steps->hasKey($key);
+        return $this->stepCollection->hasKey($stepKey);
     }
 
     public function getFirstStep(): ?StepDefinition
     {
-        return $this->steps->first();
+        return $this->stepCollection->first();
     }
 
-    public function getNextStep(StepKey $currentKey): ?StepDefinition
+    public function getNextStep(StepKey $stepKey): ?StepDefinition
     {
-        return $this->steps->getNextStep($currentKey);
+        return $this->stepCollection->getNextStep($stepKey);
     }
 
-    public function isLastStep(StepKey $key): bool
+    public function isLastStep(StepKey $stepKey): bool
     {
-        return $this->steps->isLastStep($key);
+        return $this->stepCollection->isLastStep($stepKey);
     }
 
     public function stepCount(): int
     {
-        return $this->steps->count();
+        return $this->stepCollection->count();
     }
 
     /**
@@ -108,17 +108,17 @@ final readonly class WorkflowDefinition
      *
      * @return list<class-string<StepOutput>>
      */
-    public function getAvailableOutputsAfterStep(StepKey $key): array
+    public function getAvailableOutputsAfterStep(StepKey $stepKey): array
     {
         $outputs = [];
 
-        foreach ($this->steps as $step) {
+        foreach ($this->stepCollection as $step) {
             $producedOutput = $step->produces();
             if ($producedOutput !== null) {
                 $outputs[] = $producedOutput;
             }
 
-            if ($step->key()->equals($key)) {
+            if ($step->key()->equals($stepKey)) {
                 break;
             }
         }
@@ -131,12 +131,12 @@ final readonly class WorkflowDefinition
      *
      * @return list<class-string<StepOutput>>
      */
-    public function getAvailableOutputsBeforeStep(StepKey $key): array
+    public function getAvailableOutputsBeforeStep(StepKey $stepKey): array
     {
         $outputs = [];
 
-        foreach ($this->steps as $step) {
-            if ($step->key()->equals($key)) {
+        foreach ($this->stepCollection as $step) {
+            if ($step->key()->equals($stepKey)) {
                 break;
             }
 
@@ -152,23 +152,17 @@ final readonly class WorkflowDefinition
     /**
      * Check if a step's requirements are satisfied by prior steps.
      */
-    public function areRequirementsSatisfied(StepKey $key): bool
+    public function areRequirementsSatisfied(StepKey $stepKey): bool
     {
-        $step = $this->getStep($key);
-        if ($step === null) {
+        $step = $this->getStep($stepKey);
+        if (! $step instanceof StepDefinition) {
             return false;
         }
 
-        $availableOutputs = $this->getAvailableOutputsBeforeStep($key);
+        $availableOutputs = $this->getAvailableOutputsBeforeStep($stepKey);
         $requiredOutputs = $step->requires();
 
-        foreach ($requiredOutputs as $required) {
-            if (! in_array($required, $availableOutputs, true)) {
-                return false;
-            }
-        }
-
-        return true;
+        return array_all($requiredOutputs, static fn ($required): bool => in_array($required, $availableOutputs, true));
     }
 
     /**
@@ -176,6 +170,6 @@ final readonly class WorkflowDefinition
      */
     public function identifier(): string
     {
-        return $this->key->toString().':'.$this->version->toString();
+        return $this->definitionKey->toString().':'.$this->definitionVersion->toString();
     }
 }

@@ -11,6 +11,7 @@ use Maestro\Workflow\Definition\Config\StepTimeout;
 use Maestro\Workflow\Definition\Steps\SingleJobStepDefinition;
 use Maestro\Workflow\Enums\FailurePolicy;
 use Maestro\Workflow\Enums\RetryScope;
+use Maestro\Workflow\Exceptions\InvalidStepKeyException;
 use Maestro\Workflow\ValueObjects\StepKey;
 
 final class SingleJobStepBuilder
@@ -30,18 +31,18 @@ final class SingleJobStepBuilder
 
     private ?RetryConfiguration $retryConfiguration = null;
 
-    private ?StepTimeout $timeout = null;
+    private ?StepTimeout $stepTimeout = null;
 
     private ?QueueConfiguration $queueConfiguration = null;
 
     private function __construct(
-        private readonly StepKey $key,
+        private readonly StepKey $stepKey,
     ) {
-        $this->displayName = $key->toString();
+        $this->displayName = $stepKey->toString();
     }
 
     /**
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidStepKeyException
      */
     public static function create(string $key): self
     {
@@ -85,9 +86,9 @@ final class SingleJobStepBuilder
         return $this;
     }
 
-    public function onFailure(FailurePolicy $policy): self
+    public function onFailure(FailurePolicy $failurePolicy): self
     {
-        $this->failurePolicy = $policy;
+        $this->failurePolicy = $failurePolicy;
 
         return $this;
     }
@@ -117,14 +118,14 @@ final class SingleJobStepBuilder
         int $delaySeconds = 60,
         float $backoffMultiplier = 2.0,
         int $maxDelaySeconds = 3600,
-        RetryScope $scope = RetryScope::All,
+        RetryScope $retryScope = RetryScope::All,
     ): self {
         $this->retryConfiguration = RetryConfiguration::create(
             $maxAttempts,
             $delaySeconds,
             $backoffMultiplier,
             $maxDelaySeconds,
-            $scope,
+            $retryScope,
         );
 
         return $this;
@@ -139,7 +140,7 @@ final class SingleJobStepBuilder
 
     public function timeout(?int $stepTimeoutSeconds = null, ?int $jobTimeoutSeconds = null): self
     {
-        $this->timeout = StepTimeout::create($stepTimeoutSeconds, $jobTimeoutSeconds);
+        $this->stepTimeout = StepTimeout::create($stepTimeoutSeconds, $jobTimeoutSeconds);
 
         return $this;
     }
@@ -171,14 +172,14 @@ final class SingleJobStepBuilder
     public function build(): SingleJobStepDefinition
     {
         return SingleJobStepDefinition::create(
-            $this->key,
+            $this->stepKey,
             $this->displayName,
             $this->jobClass,
             $this->requires,
             $this->produces,
             $this->failurePolicy,
             $this->retryConfiguration,
-            $this->timeout,
+            $this->stepTimeout,
             $this->queueConfiguration,
         );
     }

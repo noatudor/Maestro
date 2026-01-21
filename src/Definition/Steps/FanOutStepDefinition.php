@@ -23,7 +23,7 @@ final readonly class FanOutStepDefinition extends AbstractStepDefinition impleme
      * @param class-string<StepOutput>|null $produces
      */
     private function __construct(
-        StepKey $key,
+        StepKey $stepKey,
         string $displayName,
         private string $jobClass,
         private Closure $itemIteratorFactory,
@@ -34,17 +34,17 @@ final readonly class FanOutStepDefinition extends AbstractStepDefinition impleme
         ?string $produces,
         FailurePolicy $failurePolicy,
         RetryConfiguration $retryConfiguration,
-        StepTimeout $timeout,
+        StepTimeout $stepTimeout,
         QueueConfiguration $queueConfiguration,
     ) {
         parent::__construct(
-            $key,
+            $stepKey,
             $displayName,
             $requires,
             $produces,
             $failurePolicy,
             $retryConfiguration,
-            $timeout,
+            $stepTimeout,
             $queueConfiguration,
         );
     }
@@ -55,7 +55,7 @@ final readonly class FanOutStepDefinition extends AbstractStepDefinition impleme
      * @param class-string<StepOutput>|null $produces
      */
     public static function create(
-        StepKey $key,
+        StepKey $stepKey,
         string $displayName,
         string $jobClass,
         Closure $itemIteratorFactory,
@@ -66,11 +66,11 @@ final readonly class FanOutStepDefinition extends AbstractStepDefinition impleme
         ?string $produces = null,
         FailurePolicy $failurePolicy = FailurePolicy::FailWorkflow,
         ?RetryConfiguration $retryConfiguration = null,
-        ?StepTimeout $timeout = null,
+        ?StepTimeout $stepTimeout = null,
         ?QueueConfiguration $queueConfiguration = null,
     ): self {
         return new self(
-            $key,
+            $stepKey,
             $displayName,
             $jobClass,
             $itemIteratorFactory,
@@ -81,7 +81,7 @@ final readonly class FanOutStepDefinition extends AbstractStepDefinition impleme
             $produces,
             $failurePolicy,
             $retryConfiguration ?? RetryConfiguration::default(),
-            $timeout ?? StepTimeout::none(),
+            $stepTimeout ?? StepTimeout::none(),
             $queueConfiguration ?? QueueConfiguration::default(),
         );
     }
@@ -118,10 +118,6 @@ final readonly class FanOutStepDefinition extends AbstractStepDefinition impleme
 
     public function evaluateSuccess(int $succeeded, int $total): bool
     {
-        if ($this->successCriteria instanceof NOfMCriteria) {
-            return $this->successCriteria->evaluate($succeeded, $total);
-        }
-
         return $this->successCriteria->evaluate($succeeded, $total);
     }
 }

@@ -28,10 +28,10 @@ describe('StepCollection', static function (): void {
 
     describe('empty', static function (): void {
         it('creates empty collection', function (): void {
-            $collection = StepCollection::empty();
+            $stepCollection = StepCollection::empty();
 
-            expect($collection->isEmpty())->toBeTrue();
-            expect($collection->count())->toBe(0);
+            expect($stepCollection->isEmpty())->toBeTrue();
+            expect($stepCollection->count())->toBe(0);
         });
     });
 
@@ -43,11 +43,11 @@ describe('StepCollection', static function (): void {
 
     describe('add', static function (): void {
         it('returns new collection with added step', function (): void {
-            $newStep = SingleJobStepBuilder::create('new-step')
+            $singleJobStepDefinition = SingleJobStepBuilder::create('new-step')
                 ->job(TestJob::class)
                 ->build();
 
-            $newCollection = $this->collection->add($newStep);
+            $newCollection = $this->collection->add($singleJobStepDefinition);
 
             expect($newCollection->count())->toBe(4);
             expect($this->collection->count())->toBe(3);
@@ -191,7 +191,7 @@ describe('StepCollection', static function (): void {
 
     describe('map', static function (): void {
         it('maps steps', function (): void {
-            $keys = $this->collection->map(fn ($step) => $step->key()->toString());
+            $keys = $this->collection->map(static fn ($step) => $step->key()->toString());
 
             expect($keys)->toBe(['step-one', 'step-two', 'step-three']);
         });
@@ -199,7 +199,7 @@ describe('StepCollection', static function (): void {
 
     describe('filter', static function (): void {
         it('filters steps', function (): void {
-            $filtered = $this->collection->filter(fn ($step) => $step->producesOutput());
+            $filtered = $this->collection->filter(static fn ($step) => $step->producesOutput());
 
             expect($filtered->count())->toBe(1);
             expect($filtered->first()->key()->toString())->toBe('step-one');
@@ -208,13 +208,13 @@ describe('StepCollection', static function (): void {
 
     describe('any and every', static function (): void {
         it('checks if any step matches', function (): void {
-            expect($this->collection->any(fn ($step) => $step->producesOutput()))->toBeTrue();
-            expect($this->collection->any(fn ($step) => $step->hasRequirements()))->toBeFalse();
+            expect($this->collection->any(static fn ($step) => $step->producesOutput()))->toBeTrue();
+            expect($this->collection->any(static fn ($step) => $step->hasRequirements()))->toBeFalse();
         });
 
         it('checks if every step matches', function (): void {
-            expect($this->collection->every(fn ($step) => $step->producesOutput()))->toBeFalse();
-            expect($this->collection->every(fn ($step) => ! $step->hasRequirements()))->toBeTrue();
+            expect($this->collection->every(static fn ($step) => $step->producesOutput()))->toBeFalse();
+            expect($this->collection->every(static fn ($step): bool => ! $step->hasRequirements()))->toBeTrue();
         });
     });
 });

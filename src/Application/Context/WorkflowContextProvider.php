@@ -18,11 +18,11 @@ use Maestro\Workflow\ValueObjects\WorkflowId;
  */
 final class WorkflowContextProvider
 {
-    private ?WorkflowContext $cachedContext = null;
+    private ?WorkflowContext $workflowContext = null;
 
     public function __construct(
         private readonly WorkflowId $workflowId,
-        private readonly WorkflowDefinition $definition,
+        private readonly WorkflowDefinition $workflowDefinition,
         private readonly Container $container,
     ) {}
 
@@ -34,26 +34,26 @@ final class WorkflowContextProvider
      */
     public function get(): ?WorkflowContext
     {
-        if ($this->cachedContext !== null) {
-            return $this->cachedContext;
+        if ($this->workflowContext instanceof WorkflowContext) {
+            return $this->workflowContext;
         }
 
-        if (! $this->definition->hasContextLoader()) {
+        if (! $this->workflowDefinition->hasContextLoader()) {
             return null;
         }
 
-        $loaderClass = $this->definition->contextLoaderClass();
+        $loaderClass = $this->workflowDefinition->contextLoaderClass();
 
         if ($loaderClass === null) {
             return null;
         }
 
-        /** @var ContextLoader $loader */
-        $loader = $this->container->make($loaderClass);
+        /** @var ContextLoader $contextLoader */
+        $contextLoader = $this->container->make($loaderClass);
 
-        $this->cachedContext = $loader->load($this->workflowId);
+        $this->workflowContext = $contextLoader->load($this->workflowId);
 
-        return $this->cachedContext;
+        return $this->workflowContext;
     }
 
     /**
@@ -69,7 +69,7 @@ final class WorkflowContextProvider
     {
         $context = $this->get();
 
-        if ($context === null) {
+        if (! $context instanceof WorkflowContext) {
             return null;
         }
 
@@ -85,7 +85,7 @@ final class WorkflowContextProvider
      */
     public function hasContextLoader(): bool
     {
-        return $this->definition->hasContextLoader();
+        return $this->workflowDefinition->hasContextLoader();
     }
 
     /**
@@ -95,7 +95,7 @@ final class WorkflowContextProvider
      */
     public function clearCache(): void
     {
-        $this->cachedContext = null;
+        $this->workflowContext = null;
     }
 
     /**

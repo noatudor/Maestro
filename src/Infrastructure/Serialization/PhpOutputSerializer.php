@@ -10,9 +10,9 @@ use Maestro\Workflow\Exceptions\SerializationException;
 
 final readonly class PhpOutputSerializer implements OutputSerializer
 {
-    public function serialize(StepOutput $output): string
+    public function serialize(StepOutput $stepOutput): string
     {
-        return serialize($output);
+        return serialize($stepOutput);
     }
 
     /**

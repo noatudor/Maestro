@@ -18,15 +18,15 @@ describe('InMemoryWorkflowRepository locking', function (): void {
 
     describe('findAndLockForUpdate', function (): void {
         it('returns the workflow when not locked', function (): void {
-            $workflow = WorkflowInstance::create(
+            $workflowInstance = WorkflowInstance::create(
                 definitionKey: DefinitionKey::fromString('test-workflow'),
                 definitionVersion: DefinitionVersion::fromString('1.0.0'),
             );
-            $this->repository->save($workflow);
+            $this->repository->save($workflowInstance);
 
-            $result = $this->repository->findAndLockForUpdate($workflow->id);
+            $result = $this->repository->findAndLockForUpdate($workflowInstance->id);
 
-            expect($result->id->value)->toBe($workflow->id->value);
+            expect($result->id->value)->toBe($workflowInstance->id->value);
         });
 
         it('throws WorkflowNotFoundException when workflow does not exist', function (): void {
@@ -37,46 +37,46 @@ describe('InMemoryWorkflowRepository locking', function (): void {
         });
 
         it('throws WorkflowLockedException when already locked', function (): void {
-            $workflow = WorkflowInstance::create(
+            $workflowInstance = WorkflowInstance::create(
                 definitionKey: DefinitionKey::fromString('test-workflow'),
                 definitionVersion: DefinitionVersion::fromString('1.0.0'),
             );
-            $this->repository->save($workflow);
+            $this->repository->save($workflowInstance);
 
-            $this->repository->findAndLockForUpdate($workflow->id);
+            $this->repository->findAndLockForUpdate($workflowInstance->id);
 
-            expect(fn () => $this->repository->findAndLockForUpdate($workflow->id))
+            expect(fn () => $this->repository->findAndLockForUpdate($workflowInstance->id))
                 ->toThrow(WorkflowLockedException::class);
         });
 
         it('allows lock after release', function (): void {
-            $workflow = WorkflowInstance::create(
+            $workflowInstance = WorkflowInstance::create(
                 definitionKey: DefinitionKey::fromString('test-workflow'),
                 definitionVersion: DefinitionVersion::fromString('1.0.0'),
             );
-            $this->repository->save($workflow);
+            $this->repository->save($workflowInstance);
 
-            $this->repository->findAndLockForUpdate($workflow->id);
-            $this->repository->releaseRowLock($workflow->id);
+            $this->repository->findAndLockForUpdate($workflowInstance->id);
+            $this->repository->releaseRowLock($workflowInstance->id);
 
-            $result = $this->repository->findAndLockForUpdate($workflow->id);
+            $result = $this->repository->findAndLockForUpdate($workflowInstance->id);
 
-            expect($result->id->value)->toBe($workflow->id->value);
+            expect($result->id->value)->toBe($workflowInstance->id->value);
         });
     });
 
     describe('withLockedWorkflow', function (): void {
         it('executes callback with locked workflow', function (): void {
-            $workflow = WorkflowInstance::create(
+            $workflowInstance = WorkflowInstance::create(
                 definitionKey: DefinitionKey::fromString('test-workflow'),
                 definitionVersion: DefinitionVersion::fromString('1.0.0'),
             );
-            $this->repository->save($workflow);
+            $this->repository->save($workflowInstance);
 
             $callbackExecuted = false;
             $result = $this->repository->withLockedWorkflow(
-                $workflow->id,
-                function (WorkflowInstance $w) use (&$callbackExecuted): string {
+                $workflowInstance->id,
+                static function (WorkflowInstance $workflowInstance) use (&$callbackExecuted): string {
                     $callbackExecuted = true;
 
                     return 'success';
@@ -88,38 +88,38 @@ describe('InMemoryWorkflowRepository locking', function (): void {
         });
 
         it('releases lock after callback completes', function (): void {
-            $workflow = WorkflowInstance::create(
+            $workflowInstance = WorkflowInstance::create(
                 definitionKey: DefinitionKey::fromString('test-workflow'),
                 definitionVersion: DefinitionVersion::fromString('1.0.0'),
             );
-            $this->repository->save($workflow);
+            $this->repository->save($workflowInstance);
 
             $this->repository->withLockedWorkflow(
-                $workflow->id,
-                fn (WorkflowInstance $w) => null,
+                $workflowInstance->id,
+                static fn (WorkflowInstance $workflowInstance): null => null,
             );
 
-            $this->repository->findAndLockForUpdate($workflow->id);
+            $this->repository->findAndLockForUpdate($workflowInstance->id);
 
             expect(true)->toBeTrue();
         });
 
         it('releases lock even when callback throws exception', function (): void {
-            $workflow = WorkflowInstance::create(
+            $workflowInstance = WorkflowInstance::create(
                 definitionKey: DefinitionKey::fromString('test-workflow'),
                 definitionVersion: DefinitionVersion::fromString('1.0.0'),
             );
-            $this->repository->save($workflow);
+            $this->repository->save($workflowInstance);
 
             try {
                 $this->repository->withLockedWorkflow(
-                    $workflow->id,
-                    fn (WorkflowInstance $w) => throw new RuntimeException('Test exception'),
+                    $workflowInstance->id,
+                    static fn (WorkflowInstance $workflowInstance) => throw new RuntimeException('Test exception'),
                 );
             } catch (RuntimeException) {
             }
 
-            $this->repository->findAndLockForUpdate($workflow->id);
+            $this->repository->findAndLockForUpdate($workflowInstance->id);
 
             expect(true)->toBeTrue();
         });
@@ -127,31 +127,31 @@ describe('InMemoryWorkflowRepository locking', function (): void {
 
     describe('acquireApplicationLock', function (): void {
         it('acquires lock when not locked', function (): void {
-            $workflow = WorkflowInstance::create(
+            $workflowInstance = WorkflowInstance::create(
                 definitionKey: DefinitionKey::fromString('test-workflow'),
                 definitionVersion: DefinitionVersion::fromString('1.0.0'),
             );
-            $this->repository->save($workflow);
+            $this->repository->save($workflowInstance);
 
-            $result = $this->repository->acquireApplicationLock($workflow->id, 'lock-id-1');
+            $result = $this->repository->acquireApplicationLock($workflowInstance->id, 'lock-id-1');
 
             expect($result)->toBeTrue();
 
-            $savedWorkflow = $this->repository->find($workflow->id);
+            $savedWorkflow = $this->repository->find($workflowInstance->id);
             expect($savedWorkflow->isLocked())->toBeTrue();
             expect($savedWorkflow->lockedBy())->toBe('lock-id-1');
         });
 
         it('returns false when already locked by different lock id', function (): void {
-            $workflow = WorkflowInstance::create(
+            $workflowInstance = WorkflowInstance::create(
                 definitionKey: DefinitionKey::fromString('test-workflow'),
                 definitionVersion: DefinitionVersion::fromString('1.0.0'),
             );
-            $this->repository->save($workflow);
+            $this->repository->save($workflowInstance);
 
-            $this->repository->acquireApplicationLock($workflow->id, 'lock-id-1');
+            $this->repository->acquireApplicationLock($workflowInstance->id, 'lock-id-1');
 
-            $result = $this->repository->acquireApplicationLock($workflow->id, 'lock-id-2');
+            $result = $this->repository->acquireApplicationLock($workflowInstance->id, 'lock-id-2');
 
             expect($result)->toBeFalse();
         });
@@ -159,60 +159,60 @@ describe('InMemoryWorkflowRepository locking', function (): void {
 
     describe('releaseApplicationLock', function (): void {
         it('releases lock with matching lock id', function (): void {
-            $workflow = WorkflowInstance::create(
+            $workflowInstance = WorkflowInstance::create(
                 definitionKey: DefinitionKey::fromString('test-workflow'),
                 definitionVersion: DefinitionVersion::fromString('1.0.0'),
             );
-            $this->repository->save($workflow);
+            $this->repository->save($workflowInstance);
 
-            $this->repository->acquireApplicationLock($workflow->id, 'lock-id-1');
-            $result = $this->repository->releaseApplicationLock($workflow->id, 'lock-id-1');
+            $this->repository->acquireApplicationLock($workflowInstance->id, 'lock-id-1');
+            $result = $this->repository->releaseApplicationLock($workflowInstance->id, 'lock-id-1');
 
             expect($result)->toBeTrue();
 
-            $savedWorkflow = $this->repository->find($workflow->id);
+            $savedWorkflow = $this->repository->find($workflowInstance->id);
             expect($savedWorkflow->isLocked())->toBeFalse();
         });
 
         it('does not release lock with different lock id', function (): void {
-            $workflow = WorkflowInstance::create(
+            $workflowInstance = WorkflowInstance::create(
                 definitionKey: DefinitionKey::fromString('test-workflow'),
                 definitionVersion: DefinitionVersion::fromString('1.0.0'),
             );
-            $this->repository->save($workflow);
+            $this->repository->save($workflowInstance);
 
-            $this->repository->acquireApplicationLock($workflow->id, 'lock-id-1');
-            $result = $this->repository->releaseApplicationLock($workflow->id, 'lock-id-2');
+            $this->repository->acquireApplicationLock($workflowInstance->id, 'lock-id-1');
+            $result = $this->repository->releaseApplicationLock($workflowInstance->id, 'lock-id-2');
 
             expect($result)->toBeFalse();
 
-            $savedWorkflow = $this->repository->find($workflow->id);
+            $savedWorkflow = $this->repository->find($workflowInstance->id);
             expect($savedWorkflow->isLocked())->toBeTrue();
         });
     });
 
     describe('isLockExpired', function (): void {
         it('returns false when workflow is not locked', function (): void {
-            $workflow = WorkflowInstance::create(
+            $workflowInstance = WorkflowInstance::create(
                 definitionKey: DefinitionKey::fromString('test-workflow'),
                 definitionVersion: DefinitionVersion::fromString('1.0.0'),
             );
-            $this->repository->save($workflow);
+            $this->repository->save($workflowInstance);
 
-            $result = $this->repository->isLockExpired($workflow->id, 30);
+            $result = $this->repository->isLockExpired($workflowInstance->id, 30);
 
             expect($result)->toBeFalse();
         });
 
         it('returns false when lock is not expired', function (): void {
-            $workflow = WorkflowInstance::create(
+            $workflowInstance = WorkflowInstance::create(
                 definitionKey: DefinitionKey::fromString('test-workflow'),
                 definitionVersion: DefinitionVersion::fromString('1.0.0'),
             );
-            $this->repository->save($workflow);
-            $this->repository->acquireApplicationLock($workflow->id, 'lock-id-1');
+            $this->repository->save($workflowInstance);
+            $this->repository->acquireApplicationLock($workflowInstance->id, 'lock-id-1');
 
-            $result = $this->repository->isLockExpired($workflow->id, 30);
+            $result = $this->repository->isLockExpired($workflowInstance->id, 30);
 
             expect($result)->toBeFalse();
         });
@@ -222,12 +222,12 @@ describe('InMemoryWorkflowRepository locking', function (): void {
         it('clears expired locks', function (): void {
             CarbonImmutable::setTestNow(CarbonImmutable::now()->subMinutes(5));
 
-            $workflow = WorkflowInstance::create(
+            $workflowInstance = WorkflowInstance::create(
                 definitionKey: DefinitionKey::fromString('test-workflow'),
                 definitionVersion: DefinitionVersion::fromString('1.0.0'),
             );
-            $this->repository->save($workflow);
-            $this->repository->acquireApplicationLock($workflow->id, 'lock-id-1');
+            $this->repository->save($workflowInstance);
+            $this->repository->acquireApplicationLock($workflowInstance->id, 'lock-id-1');
 
             CarbonImmutable::setTestNow();
 
@@ -235,23 +235,23 @@ describe('InMemoryWorkflowRepository locking', function (): void {
 
             expect($clearedCount)->toBe(1);
 
-            $savedWorkflow = $this->repository->find($workflow->id);
+            $savedWorkflow = $this->repository->find($workflowInstance->id);
             expect($savedWorkflow->isLocked())->toBeFalse();
         });
 
         it('does not clear non-expired locks', function (): void {
-            $workflow = WorkflowInstance::create(
+            $workflowInstance = WorkflowInstance::create(
                 definitionKey: DefinitionKey::fromString('test-workflow'),
                 definitionVersion: DefinitionVersion::fromString('1.0.0'),
             );
-            $this->repository->save($workflow);
-            $this->repository->acquireApplicationLock($workflow->id, 'lock-id-1');
+            $this->repository->save($workflowInstance);
+            $this->repository->acquireApplicationLock($workflowInstance->id, 'lock-id-1');
 
             $clearedCount = $this->repository->clearExpiredLocks(60);
 
             expect($clearedCount)->toBe(0);
 
-            $savedWorkflow = $this->repository->find($workflow->id);
+            $savedWorkflow = $this->repository->find($workflowInstance->id);
             expect($savedWorkflow->isLocked())->toBeTrue();
         });
     });

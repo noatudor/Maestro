@@ -11,12 +11,12 @@ final class JobExecutionException extends JobException
 {
     private const int CODE = 4002;
 
-    public static function failed(JobId $jobId, Throwable $cause): self
+    public static function failed(JobId $jobId, Throwable $throwable): self
     {
         return new self(
-            message: sprintf("Job '%s' execution failed: %s", $jobId->value, $cause->getMessage()),
+            message: sprintf("Job '%s' execution failed: %s", $jobId->value, $throwable->getMessage()),
             code: self::CODE,
-            previous: $cause,
+            previous: $throwable,
         );
     }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Maestro\Workflow\Tests\Fixtures\Jobs;
 
 use Maestro\Workflow\Application\Job\OrchestratedJob;
+use Maestro\Workflow\Application\Output\StepOutputStore;
 use Maestro\Workflow\Contracts\StepOutput;
 use RuntimeException;
 
@@ -39,7 +40,7 @@ final class TestOrchestratedJob extends OrchestratedJob
             throw new RuntimeException($this->failureMessage);
         }
 
-        if ($this->outputToWrite !== null && $this->outputs() !== null) {
+        if ($this->outputToWrite instanceof StepOutput && $this->outputs() instanceof StepOutputStore) {
             $this->outputs()->write($this->outputToWrite);
         }
     }

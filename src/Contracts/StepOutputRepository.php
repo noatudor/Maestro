@@ -41,7 +41,7 @@ interface StepOutputRepository
      */
     public function has(WorkflowId $workflowId, string $outputClass): bool;
 
-    public function save(WorkflowId $workflowId, StepOutput $output): void;
+    public function save(WorkflowId $workflowId, StepOutput $stepOutput): void;
 
     /**
      * Atomically merge and save a MergeableOutput.
@@ -50,7 +50,7 @@ interface StepOutputRepository
      * ensure atomic read-modify-write operations for MergeableOutput in
      * fan-out scenarios where multiple jobs may complete concurrently.
      */
-    public function saveWithAtomicMerge(WorkflowId $workflowId, MergeableOutput $output): void;
+    public function saveWithAtomicMerge(WorkflowId $workflowId, MergeableOutput $mergeableOutput): void;
 
     /**
      * @return list<StepOutput>

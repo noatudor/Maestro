@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Maestro\Workflow\Infrastructure\Persistence\Repositories;
 
+use Carbon\CarbonImmutable;
 use Maestro\Workflow\Contracts\StepRunRepository;
 use Maestro\Workflow\Domain\Collections\StepRunCollection;
 use Maestro\Workflow\Domain\StepRun;
 use Maestro\Workflow\Enums\StepState;
+use Maestro\Workflow\Exceptions\InvalidStepKeyException;
 use Maestro\Workflow\Exceptions\StepNotFoundException;
 use Maestro\Workflow\Infrastructure\Persistence\Hydrators\StepRunHydrator;
 use Maestro\Workflow\Infrastructure\Persistence\Models\StepRunModel;
@@ -18,11 +20,11 @@ use Maestro\Workflow\ValueObjects\WorkflowId;
 final readonly class EloquentStepRunRepository implements StepRunRepository
 {
     public function __construct(
-        private StepRunHydrator $hydrator,
+        private StepRunHydrator $stepRunHydrator,
     ) {}
 
     /**
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidStepKeyException
      */
     public function find(StepRunId $stepRunId): ?StepRun
     {
@@ -32,18 +34,18 @@ final readonly class EloquentStepRunRepository implements StepRunRepository
             return null;
         }
 
-        return $this->hydrator->toDomain($model);
+        return $this->stepRunHydrator->toDomain($model);
     }
 
     /**
      * @throws StepNotFoundException
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidStepKeyException
      */
     public function findOrFail(StepRunId $stepRunId): StepRun
     {
         $stepRun = $this->find($stepRunId);
 
-        if ($stepRun === null) {
+        if (! $stepRun instanceof StepRun) {
             throw StepNotFoundException::withId($stepRunId);
         }
 
@@ -55,18 +57,18 @@ final readonly class EloquentStepRunRepository implements StepRunRepository
         $existingModel = StepRunModel::query()->find($stepRun->id->value);
 
         if ($existingModel !== null) {
-            $this->hydrator->updateFromDomain($existingModel, $stepRun);
+            $this->stepRunHydrator->updateFromDomain($existingModel, $stepRun);
             $existingModel->save();
 
             return;
         }
 
-        $model = $this->hydrator->fromDomain($stepRun);
-        $model->save();
+        $stepRunModel = $this->stepRunHydrator->fromDomain($stepRun);
+        $stepRunModel->save();
     }
 
     /**
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidStepKeyException
      */
     public function findByWorkflowId(WorkflowId $workflowId): StepRunCollection
     {
@@ -79,7 +81,7 @@ final readonly class EloquentStepRunRepository implements StepRunRepository
     }
 
     /**
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidStepKeyException
      */
     public function findByWorkflowIdAndStepKey(WorkflowId $workflowId, StepKey $stepKey): ?StepRun
     {
@@ -91,11 +93,11 @@ final readonly class EloquentStepRunRepository implements StepRunRepository
             return null;
         }
 
-        return $this->hydrator->toDomain($model);
+        return $this->stepRunHydrator->toDomain($model);
     }
 
     /**
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidStepKeyException
      */
     public function findLatestByWorkflowIdAndStepKey(WorkflowId $workflowId, StepKey $stepKey): ?StepRun
     {
@@ -108,17 +110,17 @@ final readonly class EloquentStepRunRepository implements StepRunRepository
             return null;
         }
 
-        return $this->hydrator->toDomain($model);
+        return $this->stepRunHydrator->toDomain($model);
     }
 
     /**
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidStepKeyException
      */
-    public function findByWorkflowIdAndState(WorkflowId $workflowId, StepState $state): StepRunCollection
+    public function findByWorkflowIdAndState(WorkflowId $workflowId, StepState $stepState): StepRunCollection
     {
         $models = StepRunModel::query()
             ->forWorkflow($workflowId->value)
-            ->where('status', $state->value)
+            ->where('status', $stepState->value)
             ->get();
 
         return new StepRunCollection($this->hydrateModels($models->all()));
@@ -132,7 +134,7 @@ final readonly class EloquentStepRunRepository implements StepRunRepository
     }
 
     /**
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidStepKeyException
      */
     public function findRunningByWorkflowId(WorkflowId $workflowId): StepRunCollection
     {
@@ -140,7 +142,7 @@ final readonly class EloquentStepRunRepository implements StepRunRepository
     }
 
     /**
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidStepKeyException
      */
     public function findPendingByWorkflowId(WorkflowId $workflowId): StepRunCollection
     {
@@ -173,7 +175,7 @@ final readonly class EloquentStepRunRepository implements StepRunRepository
         return $affected > 0;
     }
 
-    public function finalizeAsSucceeded(StepRunId $stepRunId, \Carbon\CarbonImmutable $finishedAt): bool
+    public function finalizeAsSucceeded(StepRunId $stepRunId, CarbonImmutable $finishedAt): bool
     {
         $affected = StepRunModel::query()
             ->where('id', $stepRunId->value)
@@ -191,7 +193,7 @@ final readonly class EloquentStepRunRepository implements StepRunRepository
         string $failureCode,
         string $failureMessage,
         int $failedJobCount,
-        \Carbon\CarbonImmutable $finishedAt,
+        CarbonImmutable $finishedAt,
     ): bool {
         $affected = StepRunModel::query()
             ->where('id', $stepRunId->value)
@@ -212,13 +214,13 @@ final readonly class EloquentStepRunRepository implements StepRunRepository
      *
      * @return list<StepRun>
      *
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidStepKeyException
      */
     private function hydrateModels(array $models): array
     {
         $result = [];
         foreach ($models as $model) {
-            $result[] = $this->hydrator->toDomain($model);
+            $result[] = $this->stepRunHydrator->toDomain($model);
         }
 
         return $result;

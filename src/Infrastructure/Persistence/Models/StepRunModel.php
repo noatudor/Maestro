@@ -9,7 +9,9 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Query\Builder;
 use Maestro\Workflow\Infrastructure\Persistence\QueryBuilders\StepRunQueryBuilder;
+use Override;
 
 /**
  * @property string $id
@@ -53,8 +55,9 @@ final class StepRunModel extends Model
     ];
 
     /**
-     * @param \Illuminate\Database\Query\Builder $query
+     * @param Builder $query
      */
+    #[Override]
     public function newEloquentBuilder($query): StepRunQueryBuilder
     {
         return new StepRunQueryBuilder($query);

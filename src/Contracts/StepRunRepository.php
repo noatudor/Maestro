@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Maestro\Workflow\Domain\Collections\StepRunCollection;
 use Maestro\Workflow\Domain\StepRun;
 use Maestro\Workflow\Enums\StepState;
+use Maestro\Workflow\Exceptions\StepNotFoundException;
 use Maestro\Workflow\ValueObjects\StepKey;
 use Maestro\Workflow\ValueObjects\StepRunId;
 use Maestro\Workflow\ValueObjects\WorkflowId;
@@ -24,10 +25,10 @@ interface StepRunRepository
 
     public function findLatestByWorkflowIdAndStepKey(WorkflowId $workflowId, StepKey $stepKey): ?StepRun;
 
-    public function findByWorkflowIdAndState(WorkflowId $workflowId, StepState $state): StepRunCollection;
+    public function findByWorkflowIdAndState(WorkflowId $workflowId, StepState $stepState): StepRunCollection;
 
     /**
-     * @throws \Maestro\Workflow\Exceptions\StepNotFoundException
+     * @throws StepNotFoundException
      */
     public function findOrFail(StepRunId $stepRunId): StepRun;
 

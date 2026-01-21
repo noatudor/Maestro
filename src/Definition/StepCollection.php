@@ -18,19 +18,15 @@ use Traversable;
  */
 final readonly class StepCollection implements Countable, IteratorAggregate
 {
-    /** @var list<StepDefinition> */
-    private array $steps;
-
     /** @var array<string, int> */
     private array $keyIndex;
 
     /**
      * @param list<StepDefinition> $steps
      */
-    private function __construct(array $steps)
+    private function __construct(private array $steps)
     {
-        $this->steps = $steps;
-        $this->keyIndex = $this->buildKeyIndex($steps);
+        $this->keyIndex = $this->buildKeyIndex($this->steps);
     }
 
     public static function empty(): self
@@ -46,9 +42,9 @@ final readonly class StepCollection implements Countable, IteratorAggregate
         return new self($steps);
     }
 
-    public function add(StepDefinition $step): self
+    public function add(StepDefinition $stepDefinition): self
     {
-        return new self([...$this->steps, $step]);
+        return new self([...$this->steps, $stepDefinition]);
     }
 
     /**
@@ -99,26 +95,26 @@ final readonly class StepCollection implements Countable, IteratorAggregate
         return $this->steps[$index] ?? null;
     }
 
-    public function findByKey(StepKey $key): ?StepDefinition
+    public function findByKey(StepKey $stepKey): ?StepDefinition
     {
-        $index = $this->keyIndex[$key->toString()] ?? null;
+        $index = $this->keyIndex[$stepKey->toString()] ?? null;
 
         return $index !== null ? $this->steps[$index] : null;
     }
 
-    public function hasKey(StepKey $key): bool
+    public function hasKey(StepKey $stepKey): bool
     {
-        return isset($this->keyIndex[$key->toString()]);
+        return isset($this->keyIndex[$stepKey->toString()]);
     }
 
-    public function indexOf(StepKey $key): ?int
+    public function indexOf(StepKey $stepKey): ?int
     {
-        return $this->keyIndex[$key->toString()] ?? null;
+        return $this->keyIndex[$stepKey->toString()] ?? null;
     }
 
-    public function getNextStep(StepKey $currentKey): ?StepDefinition
+    public function getNextStep(StepKey $stepKey): ?StepDefinition
     {
-        $index = $this->indexOf($currentKey);
+        $index = $this->indexOf($stepKey);
 
         if ($index === null) {
             return null;
@@ -127,16 +123,16 @@ final readonly class StepCollection implements Countable, IteratorAggregate
         return $this->steps[$index + 1] ?? null;
     }
 
-    public function isLastStep(StepKey $key): bool
+    public function isLastStep(StepKey $stepKey): bool
     {
-        $index = $this->indexOf($key);
+        $index = $this->indexOf($stepKey);
 
         return $index !== null && $index === count($this->steps) - 1;
     }
 
-    public function isFirstStep(StepKey $key): bool
+    public function isFirstStep(StepKey $stepKey): bool
     {
-        $index = $this->indexOf($key);
+        $index = $this->indexOf($stepKey);
 
         return $index === 0;
     }
@@ -147,7 +143,7 @@ final readonly class StepCollection implements Countable, IteratorAggregate
     public function keys(): array
     {
         return array_map(
-            static fn (StepDefinition $step): StepKey => $step->key(),
+            static fn (StepDefinition $stepDefinition): StepKey => $stepDefinition->key(),
             $this->steps,
         );
     }
@@ -155,9 +151,9 @@ final readonly class StepCollection implements Countable, IteratorAggregate
     /**
      * Get all steps that come before the given step.
      */
-    public function stepsBefore(StepKey $key): self
+    public function stepsBefore(StepKey $stepKey): self
     {
-        $index = $this->indexOf($key);
+        $index = $this->indexOf($stepKey);
 
         if ($index === null || $index === 0) {
             return self::empty();
@@ -169,9 +165,9 @@ final readonly class StepCollection implements Countable, IteratorAggregate
     /**
      * Get all steps that come after the given step.
      */
-    public function stepsAfter(StepKey $key): self
+    public function stepsAfter(StepKey $stepKey): self
     {
-        $index = $this->indexOf($key);
+        $index = $this->indexOf($stepKey);
 
         if ($index === null) {
             return self::empty();
@@ -205,13 +201,7 @@ final readonly class StepCollection implements Countable, IteratorAggregate
      */
     public function any(callable $callback): bool
     {
-        foreach ($this->steps as $step) {
-            if ($callback($step)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($this->steps, static fn ($step) => $callback($step));
     }
 
     /**
@@ -219,13 +209,7 @@ final readonly class StepCollection implements Countable, IteratorAggregate
      */
     public function every(callable $callback): bool
     {
-        foreach ($this->steps as $step) {
-            if (! $callback($step)) {
-                return false;
-            }
-        }
-
-        return true;
+        return array_all($this->steps, static fn ($step) => $callback($step));
     }
 
     /**

@@ -21,7 +21,7 @@ final class WorkflowInstance
         public readonly DefinitionKey $definitionKey,
         public readonly DefinitionVersion $definitionVersion,
         public readonly CarbonImmutable $createdAt,
-        private WorkflowState $state,
+        private WorkflowState $workflowState,
         private ?StepKey $currentStepKey,
         private ?CarbonImmutable $pausedAt,
         private ?string $pausedReason,
@@ -38,16 +38,16 @@ final class WorkflowInstance
     public static function create(
         DefinitionKey $definitionKey,
         DefinitionVersion $definitionVersion,
-        ?WorkflowId $id = null,
+        ?WorkflowId $workflowId = null,
     ): self {
         $now = CarbonImmutable::now();
 
         return new self(
-            id: $id ?? WorkflowId::generate(),
+            id: $workflowId ?? WorkflowId::generate(),
             definitionKey: $definitionKey,
             definitionVersion: $definitionVersion,
             createdAt: $now,
-            state: WorkflowState::Pending,
+            workflowState: WorkflowState::Pending,
             currentStepKey: null,
             pausedAt: null,
             pausedReason: null,
@@ -63,10 +63,10 @@ final class WorkflowInstance
     }
 
     public static function reconstitute(
-        WorkflowId $id,
+        WorkflowId $workflowId,
         DefinitionKey $definitionKey,
         DefinitionVersion $definitionVersion,
-        WorkflowState $state,
+        WorkflowState $workflowState,
         ?StepKey $currentStepKey,
         ?CarbonImmutable $pausedAt,
         ?string $pausedReason,
@@ -81,11 +81,11 @@ final class WorkflowInstance
         CarbonImmutable $updatedAt,
     ): self {
         return new self(
-            id: $id,
+            id: $workflowId,
             definitionKey: $definitionKey,
             definitionVersion: $definitionVersion,
             createdAt: $createdAt,
-            state: $state,
+            workflowState: $workflowState,
             currentStepKey: $currentStepKey,
             pausedAt: $pausedAt,
             pausedReason: $pausedReason,
@@ -102,7 +102,7 @@ final class WorkflowInstance
 
     public function state(): WorkflowState
     {
-        return $this->state;
+        return $this->workflowState;
     }
 
     public function currentStepKey(): ?StepKey
@@ -162,42 +162,42 @@ final class WorkflowInstance
 
     public function isPending(): bool
     {
-        return $this->state === WorkflowState::Pending;
+        return $this->workflowState === WorkflowState::Pending;
     }
 
     public function isRunning(): bool
     {
-        return $this->state === WorkflowState::Running;
+        return $this->workflowState === WorkflowState::Running;
     }
 
     public function isPaused(): bool
     {
-        return $this->state === WorkflowState::Paused;
+        return $this->workflowState === WorkflowState::Paused;
     }
 
     public function isSucceeded(): bool
     {
-        return $this->state === WorkflowState::Succeeded;
+        return $this->workflowState === WorkflowState::Succeeded;
     }
 
     public function isFailed(): bool
     {
-        return $this->state === WorkflowState::Failed;
+        return $this->workflowState === WorkflowState::Failed;
     }
 
     public function isCancelled(): bool
     {
-        return $this->state === WorkflowState::Cancelled;
+        return $this->workflowState === WorkflowState::Cancelled;
     }
 
     public function isTerminal(): bool
     {
-        return $this->state->isTerminal();
+        return $this->workflowState->isTerminal();
     }
 
     public function isActive(): bool
     {
-        return $this->state->isActive();
+        return $this->workflowState->isActive();
     }
 
     public function isLocked(): bool
@@ -282,10 +282,10 @@ final class WorkflowInstance
     public function retry(): void
     {
         if (! $this->isFailed()) {
-            throw InvalidStateTransitionException::forWorkflow($this->state, WorkflowState::Running);
+            throw InvalidStateTransitionException::forWorkflow($this->workflowState, WorkflowState::Running);
         }
 
-        $this->state = WorkflowState::Running;
+        $this->workflowState = WorkflowState::Running;
         $this->failedAt = null;
         $this->failureCode = null;
         $this->failureMessage = null;
@@ -335,13 +335,13 @@ final class WorkflowInstance
     /**
      * @throws InvalidStateTransitionException
      */
-    private function transitionTo(WorkflowState $target): void
+    private function transitionTo(WorkflowState $workflowState): void
     {
-        if (! $this->state->canTransitionTo($target)) {
-            throw InvalidStateTransitionException::forWorkflow($this->state, $target);
+        if (! $this->workflowState->canTransitionTo($workflowState)) {
+            throw InvalidStateTransitionException::forWorkflow($this->workflowState, $workflowState);
         }
 
-        $this->state = $target;
+        $this->workflowState = $workflowState;
     }
 
     private function touch(): void

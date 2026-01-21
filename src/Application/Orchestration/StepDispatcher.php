@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Maestro\Workflow\Application\Orchestration;
 
+use Closure;
 use Maestro\Workflow\Application\Context\WorkflowContextProviderFactory;
 use Maestro\Workflow\Application\Dependency\StepDependencyChecker;
 use Maestro\Workflow\Application\Job\JobDispatchService;
@@ -31,10 +32,10 @@ final readonly class StepDispatcher
     public function __construct(
         private StepRunRepository $stepRunRepository,
         private JobDispatchService $jobDispatchService,
-        private StepDependencyChecker $dependencyChecker,
-        private StepOutputStoreFactory $outputStoreFactory,
-        private WorkflowContextProviderFactory $contextProviderFactory,
-        private WorkflowDefinitionRegistry $definitionRegistry,
+        private StepDependencyChecker $stepDependencyChecker,
+        private StepOutputStoreFactory $stepOutputStoreFactory,
+        private WorkflowContextProviderFactory $workflowContextProviderFactory,
+        private WorkflowDefinitionRegistry $workflowDefinitionRegistry,
     ) {}
 
     /**
@@ -46,19 +47,19 @@ final readonly class StepDispatcher
      * @throws InvalidStateTransitionException
      * @throws DefinitionNotFoundException
      */
-    public function dispatchStep(WorkflowInstance $workflow, StepDefinition $stepDefinition): StepRun
+    public function dispatchStep(WorkflowInstance $workflowInstance, StepDefinition $stepDefinition): StepRun
     {
-        $this->validateDependencies($workflow, $stepDefinition);
+        $this->validateDependencies($workflowInstance, $stepDefinition);
 
         $existingStepRun = $this->stepRunRepository->findLatestByWorkflowIdAndStepKey(
-            $workflow->id,
+            $workflowInstance->id,
             $stepDefinition->key(),
         );
 
-        $attempt = $existingStepRun !== null ? $existingStepRun->attempt : 0;
+        $attempt = $existingStepRun instanceof StepRun ? $existingStepRun->attempt : 0;
 
         $stepRun = StepRun::create(
-            workflowId: $workflow->id,
+            workflowId: $workflowInstance->id,
             stepKey: $stepDefinition->key(),
             attempt: $attempt + 1,
         );
@@ -66,9 +67,9 @@ final readonly class StepDispatcher
         $stepRun->start();
 
         if ($stepDefinition instanceof FanOutStep) {
-            $this->dispatchFanOutJobs($workflow, $stepRun, $stepDefinition);
+            $this->dispatchFanOutJobs($workflowInstance, $stepRun, $stepDefinition);
         } elseif ($stepDefinition instanceof SingleJobStep) {
-            $this->dispatchSingleJob($workflow, $stepRun, $stepDefinition);
+            $this->dispatchSingleJob($workflowInstance, $stepRun, $stepDefinition);
         }
 
         $this->stepRunRepository->save($stepRun);
@@ -83,18 +84,18 @@ final readonly class StepDispatcher
      * @throws InvalidStateTransitionException
      * @throws DefinitionNotFoundException
      */
-    public function retryStep(WorkflowInstance $workflow, StepDefinition $stepDefinition): StepRun
+    public function retryStep(WorkflowInstance $workflowInstance, StepDefinition $stepDefinition): StepRun
     {
-        return $this->dispatchStep($workflow, $stepDefinition);
+        return $this->dispatchStep($workflowInstance, $stepDefinition);
     }
 
     /**
      * @throws StepDependencyException
      */
-    private function validateDependencies(WorkflowInstance $workflow, StepDefinition $stepDefinition): void
+    private function validateDependencies(WorkflowInstance $workflowInstance, StepDefinition $stepDefinition): void
     {
-        if (! $this->dependencyChecker->areDependenciesMet($workflow->id, $stepDefinition)) {
-            $missing = $this->dependencyChecker->getMissingDependencies($workflow->id, $stepDefinition);
+        if (! $this->stepDependencyChecker->areDependenciesMet($workflowInstance->id, $stepDefinition)) {
+            $missing = $this->stepDependencyChecker->getMissingDependencies($workflowInstance->id, $stepDefinition);
 
             throw StepDependencyException::missingOutputs(
                 $stepDefinition->key(),
@@ -104,61 +105,61 @@ final readonly class StepDispatcher
     }
 
     private function dispatchSingleJob(
-        WorkflowInstance $workflow,
+        WorkflowInstance $workflowInstance,
         StepRun $stepRun,
-        SingleJobStep $stepDefinition,
+        SingleJobStep $singleJobStep,
     ): void {
         /** @var class-string<OrchestratedJob> $jobClass */
-        $jobClass = $stepDefinition->jobClass();
-        $queueConfig = $stepDefinition->queueConfiguration();
+        $jobClass = $singleJobStep->jobClass();
+        $queueConfiguration = $singleJobStep->queueConfiguration();
 
-        $job = $this->jobDispatchService->createJob(
+        $orchestratedJob = $this->jobDispatchService->createJob(
             $jobClass,
-            $workflow->id,
+            $workflowInstance->id,
             $stepRun->id,
         );
 
         $stepRun->setTotalJobCount(1);
 
-        $this->jobDispatchService->dispatch($job, $queueConfig);
+        $this->jobDispatchService->dispatch($orchestratedJob, $queueConfiguration);
     }
 
     /**
      * @throws DefinitionNotFoundException
      */
     private function dispatchFanOutJobs(
-        WorkflowInstance $workflow,
+        WorkflowInstance $workflowInstance,
         StepRun $stepRun,
-        FanOutStep $stepDefinition,
+        FanOutStep $fanOutStep,
     ): void {
-        $definition = $this->definitionRegistry->get(
-            $workflow->definitionKey,
-            $workflow->definitionVersion,
+        $workflowDefinition = $this->workflowDefinitionRegistry->get(
+            $workflowInstance->definitionKey,
+            $workflowInstance->definitionVersion,
         );
 
-        $contextProvider = $this->contextProviderFactory->forWorkflow($workflow->id, $definition);
-        $outputStore = $this->outputStoreFactory->forWorkflow($workflow->id);
+        $workflowContextProvider = $this->workflowContextProviderFactory->forWorkflow($workflowInstance->id, $workflowDefinition);
+        $stepOutputStore = $this->stepOutputStoreFactory->forWorkflow($workflowInstance->id);
 
-        $iteratorFactory = $stepDefinition->itemIteratorFactory();
-        $items = $iteratorFactory($contextProvider->get(), $outputStore);
+        $iteratorFactory = $fanOutStep->itemIteratorFactory();
+        $items = $iteratorFactory($workflowContextProvider->get(), $stepOutputStore);
 
         /** @var class-string<OrchestratedJob> $jobClass */
-        $jobClass = $stepDefinition->jobClass();
-        $queueConfig = $stepDefinition->queueConfiguration();
-        $argumentsFactory = $stepDefinition->jobArgumentsFactory();
+        $jobClass = $fanOutStep->jobClass();
+        $queueConfiguration = $fanOutStep->queueConfiguration();
+        $argumentsFactory = $fanOutStep->jobArgumentsFactory();
 
         $jobs = [];
         $itemCount = 0;
 
         foreach ($items as $item) {
             $arguments = [];
-            if ($argumentsFactory !== null) {
-                $arguments = $argumentsFactory($item, $contextProvider->get(), $outputStore);
+            if ($argumentsFactory instanceof Closure) {
+                $arguments = $argumentsFactory($item, $workflowContextProvider->get(), $stepOutputStore);
             } else {
                 $arguments = ['item' => $item];
             }
 
-            $job = $this->createFanOutJob($jobClass, $workflow, $stepRun, $arguments);
+            $job = $this->createFanOutJob($jobClass, $workflowInstance, $stepRun, $arguments);
             $jobs[] = $job;
             $itemCount++;
         }
@@ -169,7 +170,7 @@ final readonly class StepDispatcher
             return;
         }
 
-        $this->jobDispatchService->dispatchMany($jobs, $queueConfig);
+        $this->jobDispatchService->dispatchMany($jobs, $queueConfiguration);
     }
 
     /**
@@ -178,15 +179,14 @@ final readonly class StepDispatcher
      */
     private function createFanOutJob(
         string $jobClass,
-        WorkflowInstance $workflow,
+        WorkflowInstance $workflowInstance,
         StepRun $stepRun,
         array $arguments,
     ): OrchestratedJob {
         $jobUuid = $this->jobDispatchService->generateJobUuid();
 
-        /** @var OrchestratedJob */
         return new $jobClass(
-            $workflow->id,
+            $workflowInstance->id,
             $stepRun->id,
             $jobUuid,
             ...$arguments,

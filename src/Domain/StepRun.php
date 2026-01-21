@@ -19,7 +19,7 @@ final class StepRun
         public readonly StepKey $stepKey,
         public readonly int $attempt,
         public readonly CarbonImmutable $createdAt,
-        private StepState $status,
+        private StepState $stepState,
         private ?CarbonImmutable $startedAt,
         private ?CarbonImmutable $finishedAt,
         private ?string $failureCode,
@@ -35,17 +35,17 @@ final class StepRun
         StepKey $stepKey,
         int $attempt = 1,
         int $totalJobCount = 0,
-        ?StepRunId $id = null,
+        ?StepRunId $stepRunId = null,
     ): self {
         $now = CarbonImmutable::now();
 
         return new self(
-            id: $id ?? StepRunId::generate(),
+            id: $stepRunId ?? StepRunId::generate(),
             workflowId: $workflowId,
             stepKey: $stepKey,
             attempt: $attempt,
             createdAt: $now,
-            status: StepState::Pending,
+            stepState: StepState::Pending,
             startedAt: null,
             finishedAt: null,
             failureCode: null,
@@ -58,11 +58,11 @@ final class StepRun
     }
 
     public static function reconstitute(
-        StepRunId $id,
+        StepRunId $stepRunId,
         WorkflowId $workflowId,
         StepKey $stepKey,
         int $attempt,
-        StepState $status,
+        StepState $stepState,
         ?CarbonImmutable $startedAt,
         ?CarbonImmutable $finishedAt,
         ?string $failureCode,
@@ -74,12 +74,12 @@ final class StepRun
         CarbonImmutable $updatedAt,
     ): self {
         return new self(
-            id: $id,
+            id: $stepRunId,
             workflowId: $workflowId,
             stepKey: $stepKey,
             attempt: $attempt,
             createdAt: $createdAt,
-            status: $status,
+            stepState: $stepState,
             startedAt: $startedAt,
             finishedAt: $finishedAt,
             failureCode: $failureCode,
@@ -93,7 +93,7 @@ final class StepRun
 
     public function status(): StepState
     {
-        return $this->status;
+        return $this->stepState;
     }
 
     public function startedAt(): ?CarbonImmutable
@@ -138,32 +138,32 @@ final class StepRun
 
     public function isPending(): bool
     {
-        return $this->status === StepState::Pending;
+        return $this->stepState === StepState::Pending;
     }
 
     public function isRunning(): bool
     {
-        return $this->status === StepState::Running;
+        return $this->stepState === StepState::Running;
     }
 
     public function isSucceeded(): bool
     {
-        return $this->status === StepState::Succeeded;
+        return $this->stepState === StepState::Succeeded;
     }
 
     public function isFailed(): bool
     {
-        return $this->status === StepState::Failed;
+        return $this->stepState === StepState::Failed;
     }
 
     public function isTerminal(): bool
     {
-        return $this->status->isTerminal();
+        return $this->stepState->isTerminal();
     }
 
     public function hasAllJobsCompleted(): bool
     {
-        return $this->totalJobCount > 0 && $this->completedJobCount() >= $this->totalJobCount;
+        return $this->totalJobCount > 0 && $this->completedJobCount >= $this->totalJobCount;
     }
 
     public function completedJobCount(): int
@@ -231,7 +231,7 @@ final class StepRun
 
     public function duration(): ?int
     {
-        if ($this->startedAt === null) {
+        if (! $this->startedAt instanceof CarbonImmutable) {
             return null;
         }
 
@@ -243,13 +243,13 @@ final class StepRun
     /**
      * @throws InvalidStateTransitionException
      */
-    private function transitionTo(StepState $target): void
+    private function transitionTo(StepState $stepState): void
     {
-        if (! $this->status->canTransitionTo($target)) {
-            throw InvalidStateTransitionException::forStep($this->status, $target);
+        if (! $this->stepState->canTransitionTo($stepState)) {
+            throw InvalidStateTransitionException::forStep($this->stepState, $stepState);
         }
 
-        $this->status = $target;
+        $this->stepState = $stepState;
     }
 
     private function touch(): void

@@ -19,19 +19,19 @@ abstract readonly class AbstractStepDefinition implements StepDefinition
      * @param class-string<StepOutput>|null $produces
      */
     protected function __construct(
-        private StepKey $key,
+        private StepKey $stepKey,
         private string $displayName,
         private array $requires,
         private ?string $produces,
         private FailurePolicy $failurePolicy,
         private RetryConfiguration $retryConfiguration,
-        private StepTimeout $timeout,
+        private StepTimeout $stepTimeout,
         private QueueConfiguration $queueConfiguration,
     ) {}
 
     final public function key(): StepKey
     {
-        return $this->key;
+        return $this->stepKey;
     }
 
     final public function displayName(): string
@@ -61,7 +61,7 @@ abstract readonly class AbstractStepDefinition implements StepDefinition
 
     final public function timeout(): StepTimeout
     {
-        return $this->timeout;
+        return $this->stepTimeout;
     }
 
     final public function queueConfiguration(): QueueConfiguration

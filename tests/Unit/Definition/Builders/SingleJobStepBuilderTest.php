@@ -12,17 +12,17 @@ use Maestro\Workflow\Tests\Fixtures\Outputs\TestOutput;
 describe('SingleJobStepBuilder', static function (): void {
     describe('build', static function (): void {
         it('builds step with minimal configuration', function (): void {
-            $step = SingleJobStepBuilder::create('validate')
+            $singleJobStepDefinition = SingleJobStepBuilder::create('validate')
                 ->job(TestJob::class)
                 ->build();
 
-            expect($step->key()->toString())->toBe('validate');
-            expect($step->displayName())->toBe('validate');
-            expect($step->jobClass())->toBe(TestJob::class);
+            expect($singleJobStepDefinition->key()->toString())->toBe('validate');
+            expect($singleJobStepDefinition->displayName())->toBe('validate');
+            expect($singleJobStepDefinition->jobClass())->toBe(TestJob::class);
         });
 
         it('builds step with full configuration', function (): void {
-            $step = SingleJobStepBuilder::create('process')
+            $singleJobStepDefinition = SingleJobStepBuilder::create('process')
                 ->displayName('Process Data')
                 ->job(TestJob::class)
                 ->requires(TestOutput::class)
@@ -35,66 +35,66 @@ describe('SingleJobStepBuilder', static function (): void {
                 ->delay(10)
                 ->build();
 
-            expect($step->displayName())->toBe('Process Data');
-            expect($step->requires())->toBe([TestOutput::class]);
-            expect($step->produces())->toBe(AnotherOutput::class);
-            expect($step->failurePolicy())->toBe(FailurePolicy::FailWorkflow);
-            expect($step->retryConfiguration()->maxAttempts)->toBe(5);
-            expect($step->retryConfiguration()->scope)->toBe(RetryScope::FailedOnly);
-            expect($step->timeout()->stepTimeoutSeconds)->toBe(300);
-            expect($step->timeout()->jobTimeoutSeconds)->toBe(60);
-            expect($step->queueConfiguration()->queue)->toBe('high');
-            expect($step->queueConfiguration()->connection)->toBe('redis');
-            expect($step->queueConfiguration()->delaySeconds)->toBe(10);
+            expect($singleJobStepDefinition->displayName())->toBe('Process Data');
+            expect($singleJobStepDefinition->requires())->toBe([TestOutput::class]);
+            expect($singleJobStepDefinition->produces())->toBe(AnotherOutput::class);
+            expect($singleJobStepDefinition->failurePolicy())->toBe(FailurePolicy::FailWorkflow);
+            expect($singleJobStepDefinition->retryConfiguration()->maxAttempts)->toBe(5);
+            expect($singleJobStepDefinition->retryConfiguration()->scope)->toBe(RetryScope::FailedOnly);
+            expect($singleJobStepDefinition->timeout()->stepTimeoutSeconds)->toBe(300);
+            expect($singleJobStepDefinition->timeout()->jobTimeoutSeconds)->toBe(60);
+            expect($singleJobStepDefinition->queueConfiguration()->queue)->toBe('high');
+            expect($singleJobStepDefinition->queueConfiguration()->connection)->toBe('redis');
+            expect($singleJobStepDefinition->queueConfiguration()->delaySeconds)->toBe(10);
         });
     });
 
     describe('failure policy shortcuts', static function (): void {
         it('sets failWorkflow policy', function (): void {
-            $step = SingleJobStepBuilder::create('test')
+            $singleJobStepDefinition = SingleJobStepBuilder::create('test')
                 ->job(TestJob::class)
                 ->failWorkflow()
                 ->build();
 
-            expect($step->failurePolicy())->toBe(FailurePolicy::FailWorkflow);
+            expect($singleJobStepDefinition->failurePolicy())->toBe(FailurePolicy::FailWorkflow);
         });
 
         it('sets pauseWorkflow policy', function (): void {
-            $step = SingleJobStepBuilder::create('test')
+            $singleJobStepDefinition = SingleJobStepBuilder::create('test')
                 ->job(TestJob::class)
                 ->pauseWorkflow()
                 ->build();
 
-            expect($step->failurePolicy())->toBe(FailurePolicy::PauseWorkflow);
+            expect($singleJobStepDefinition->failurePolicy())->toBe(FailurePolicy::PauseWorkflow);
         });
 
         it('sets retryStep policy', function (): void {
-            $step = SingleJobStepBuilder::create('test')
+            $singleJobStepDefinition = SingleJobStepBuilder::create('test')
                 ->job(TestJob::class)
                 ->retryStep()
                 ->build();
 
-            expect($step->failurePolicy())->toBe(FailurePolicy::RetryStep);
+            expect($singleJobStepDefinition->failurePolicy())->toBe(FailurePolicy::RetryStep);
         });
 
         it('sets skipStep policy', function (): void {
-            $step = SingleJobStepBuilder::create('test')
+            $singleJobStepDefinition = SingleJobStepBuilder::create('test')
                 ->job(TestJob::class)
                 ->skipStep()
                 ->build();
 
-            expect($step->failurePolicy())->toBe(FailurePolicy::SkipStep);
+            expect($singleJobStepDefinition->failurePolicy())->toBe(FailurePolicy::SkipStep);
         });
     });
 
     describe('noRetry', static function (): void {
         it('creates step with no retry', function (): void {
-            $step = SingleJobStepBuilder::create('test')
+            $singleJobStepDefinition = SingleJobStepBuilder::create('test')
                 ->job(TestJob::class)
                 ->noRetry()
                 ->build();
 
-            expect($step->retryConfiguration()->allowsRetry())->toBeFalse();
+            expect($singleJobStepDefinition->retryConfiguration()->allowsRetry())->toBeFalse();
         });
     });
 });

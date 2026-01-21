@@ -9,6 +9,7 @@ use Maestro\Workflow\Definition\WorkflowDefinitionRegistry;
 use Maestro\Workflow\Domain\WorkflowInstance;
 use Maestro\Workflow\Exceptions\DefinitionNotFoundException;
 use Maestro\Workflow\Exceptions\InvalidStateTransitionException;
+use Maestro\Workflow\Exceptions\StepDependencyException;
 use Maestro\Workflow\Exceptions\WorkflowAlreadyCancelledException;
 use Maestro\Workflow\Exceptions\WorkflowLockedException;
 use Maestro\Workflow\Exceptions\WorkflowNotFoundException;
@@ -25,8 +26,8 @@ final readonly class WorkflowManagementService
 {
     public function __construct(
         private WorkflowRepository $workflowRepository,
-        private WorkflowDefinitionRegistry $definitionRegistry,
-        private WorkflowAdvancer $advancer,
+        private WorkflowDefinitionRegistry $workflowDefinitionRegistry,
+        private WorkflowAdvancer $workflowAdvancer,
     ) {}
 
     /**
@@ -36,25 +37,25 @@ final readonly class WorkflowManagementService
      * @throws WorkflowNotFoundException
      * @throws WorkflowLockedException
      * @throws InvalidStateTransitionException
-     * @throws \Maestro\Workflow\Exceptions\StepDependencyException
+     * @throws StepDependencyException
      */
     public function startWorkflow(
         DefinitionKey $definitionKey,
         ?WorkflowId $workflowId = null,
     ): WorkflowInstance {
-        $definition = $this->definitionRegistry->getLatest($definitionKey);
+        $workflowDefinition = $this->workflowDefinitionRegistry->getLatest($definitionKey);
 
-        $workflow = WorkflowInstance::create(
-            definitionKey: $definition->key(),
-            definitionVersion: $definition->version(),
-            id: $workflowId,
+        $workflowInstance = WorkflowInstance::create(
+            definitionKey: $workflowDefinition->key(),
+            definitionVersion: $workflowDefinition->version(),
+            workflowId: $workflowId,
         );
 
-        $this->workflowRepository->save($workflow);
+        $this->workflowRepository->save($workflowInstance);
 
-        $this->advancer->evaluate($workflow->id);
+        $this->workflowAdvancer->evaluate($workflowInstance->id);
 
-        return $workflow;
+        return $workflowInstance;
     }
 
     /**
@@ -65,11 +66,11 @@ final readonly class WorkflowManagementService
      */
     public function pauseWorkflow(WorkflowId $workflowId, ?string $reason = null): WorkflowInstance
     {
-        $workflow = $this->workflowRepository->findOrFail($workflowId);
-        $workflow->pause($reason);
-        $this->workflowRepository->save($workflow);
+        $workflowInstance = $this->workflowRepository->findOrFail($workflowId);
+        $workflowInstance->pause($reason);
+        $this->workflowRepository->save($workflowInstance);
 
-        return $workflow;
+        return $workflowInstance;
     }
 
     /**
@@ -79,17 +80,17 @@ final readonly class WorkflowManagementService
      * @throws WorkflowLockedException
      * @throws InvalidStateTransitionException
      * @throws DefinitionNotFoundException
-     * @throws \Maestro\Workflow\Exceptions\StepDependencyException
+     * @throws StepDependencyException
      */
     public function resumeWorkflow(WorkflowId $workflowId): WorkflowInstance
     {
-        $workflow = $this->workflowRepository->findOrFail($workflowId);
-        $workflow->resume();
-        $this->workflowRepository->save($workflow);
+        $workflowInstance = $this->workflowRepository->findOrFail($workflowId);
+        $workflowInstance->resume();
+        $this->workflowRepository->save($workflowInstance);
 
-        $this->advancer->evaluate($workflowId);
+        $this->workflowAdvancer->evaluate($workflowId);
 
-        return $workflow;
+        return $workflowInstance;
     }
 
     /**
@@ -101,11 +102,11 @@ final readonly class WorkflowManagementService
      */
     public function cancelWorkflow(WorkflowId $workflowId): WorkflowInstance
     {
-        $workflow = $this->workflowRepository->findOrFail($workflowId);
-        $workflow->cancel();
-        $this->workflowRepository->save($workflow);
+        $workflowInstance = $this->workflowRepository->findOrFail($workflowId);
+        $workflowInstance->cancel();
+        $this->workflowRepository->save($workflowInstance);
 
-        return $workflow;
+        return $workflowInstance;
     }
 
     /**
@@ -115,17 +116,17 @@ final readonly class WorkflowManagementService
      * @throws WorkflowLockedException
      * @throws InvalidStateTransitionException
      * @throws DefinitionNotFoundException
-     * @throws \Maestro\Workflow\Exceptions\StepDependencyException
+     * @throws StepDependencyException
      */
     public function retryWorkflow(WorkflowId $workflowId): WorkflowInstance
     {
-        $workflow = $this->workflowRepository->findOrFail($workflowId);
-        $workflow->retry();
-        $this->workflowRepository->save($workflow);
+        $workflowInstance = $this->workflowRepository->findOrFail($workflowId);
+        $workflowInstance->retry();
+        $this->workflowRepository->save($workflowInstance);
 
-        $this->advancer->evaluate($workflowId);
+        $this->workflowAdvancer->evaluate($workflowId);
 
-        return $workflow;
+        return $workflowInstance;
     }
 
     /**

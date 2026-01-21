@@ -42,39 +42,39 @@ final readonly class JobLedgerHydrator
         return $model;
     }
 
-    public function extractJobId(JobLedgerModel $model): JobId
+    public function extractJobId(JobLedgerModel $jobLedgerModel): JobId
     {
-        return JobId::fromString($model->id);
+        return JobId::fromString($jobLedgerModel->id);
     }
 
-    public function extractWorkflowId(JobLedgerModel $model): WorkflowId
+    public function extractWorkflowId(JobLedgerModel $jobLedgerModel): WorkflowId
     {
-        return WorkflowId::fromString($model->workflow_id);
+        return WorkflowId::fromString($jobLedgerModel->workflow_id);
     }
 
-    public function extractStepRunId(JobLedgerModel $model): StepRunId
+    public function extractStepRunId(JobLedgerModel $jobLedgerModel): StepRunId
     {
-        return StepRunId::fromString($model->step_run_id);
+        return StepRunId::fromString($jobLedgerModel->step_run_id);
     }
 
-    public function extractStatus(JobLedgerModel $model): JobState
+    public function extractStatus(JobLedgerModel $jobLedgerModel): JobState
     {
-        return JobState::from($model->status);
+        return JobState::from($jobLedgerModel->status);
     }
 
-    public function extractDispatchedAt(JobLedgerModel $model): CarbonImmutable
+    public function extractDispatchedAt(JobLedgerModel $jobLedgerModel): CarbonImmutable
     {
-        return $model->dispatched_at;
+        return $jobLedgerModel->dispatched_at;
     }
 
-    public function extractStartedAt(JobLedgerModel $model): ?CarbonImmutable
+    public function extractStartedAt(JobLedgerModel $jobLedgerModel): ?CarbonImmutable
     {
-        return $model->started_at;
+        return $jobLedgerModel->started_at;
     }
 
-    public function extractFinishedAt(JobLedgerModel $model): ?CarbonImmutable
+    public function extractFinishedAt(JobLedgerModel $jobLedgerModel): ?CarbonImmutable
     {
-        return $model->finished_at;
+        return $jobLedgerModel->finished_at;
     }
 
     /**
@@ -99,95 +99,95 @@ final readonly class JobLedgerHydrator
      *     updated_at: CarbonImmutable,
      * }
      */
-    public function extractAll(JobLedgerModel $model): array
+    public function extractAll(JobLedgerModel $jobLedgerModel): array
     {
         return [
-            'id' => $this->extractJobId($model),
-            'workflow_id' => $this->extractWorkflowId($model),
-            'step_run_id' => $this->extractStepRunId($model),
-            'job_uuid' => $model->job_uuid,
-            'job_class' => $model->job_class,
-            'queue' => $model->queue,
-            'status' => $this->extractStatus($model),
-            'attempt' => $model->attempt,
-            'dispatched_at' => $model->dispatched_at,
-            'started_at' => $model->started_at,
-            'finished_at' => $model->finished_at,
-            'runtime_ms' => $model->runtime_ms,
-            'failure_class' => $model->failure_class,
-            'failure_message' => $model->failure_message,
-            'failure_trace' => $model->failure_trace,
-            'worker_id' => $model->worker_id,
-            'created_at' => $model->created_at,
-            'updated_at' => $model->updated_at,
+            'id' => $this->extractJobId($jobLedgerModel),
+            'workflow_id' => $this->extractWorkflowId($jobLedgerModel),
+            'step_run_id' => $this->extractStepRunId($jobLedgerModel),
+            'job_uuid' => $jobLedgerModel->job_uuid,
+            'job_class' => $jobLedgerModel->job_class,
+            'queue' => $jobLedgerModel->queue,
+            'status' => $this->extractStatus($jobLedgerModel),
+            'attempt' => $jobLedgerModel->attempt,
+            'dispatched_at' => $jobLedgerModel->dispatched_at,
+            'started_at' => $jobLedgerModel->started_at,
+            'finished_at' => $jobLedgerModel->finished_at,
+            'runtime_ms' => $jobLedgerModel->runtime_ms,
+            'failure_class' => $jobLedgerModel->failure_class,
+            'failure_message' => $jobLedgerModel->failure_message,
+            'failure_trace' => $jobLedgerModel->failure_trace,
+            'worker_id' => $jobLedgerModel->worker_id,
+            'created_at' => $jobLedgerModel->created_at,
+            'updated_at' => $jobLedgerModel->updated_at,
         ];
     }
 
-    public function updateStatus(JobLedgerModel $model, JobState $status): void
+    public function updateStatus(JobLedgerModel $jobLedgerModel, JobState $jobState): void
     {
-        $model->status = $status->value;
+        $jobLedgerModel->status = $jobState->value;
     }
 
-    public function markStarted(JobLedgerModel $model, ?string $workerId = null): void
+    public function markStarted(JobLedgerModel $jobLedgerModel, ?string $workerId = null): void
     {
-        $model->status = JobState::Running->value;
-        $model->started_at = CarbonImmutable::now();
-        $model->worker_id = $workerId;
+        $jobLedgerModel->status = JobState::Running->value;
+        $jobLedgerModel->started_at = CarbonImmutable::now();
+        $jobLedgerModel->worker_id = $workerId;
     }
 
-    public function markSucceeded(JobLedgerModel $model): void
+    public function markSucceeded(JobLedgerModel $jobLedgerModel): void
     {
-        $model->status = JobState::Succeeded->value;
-        $model->finished_at = CarbonImmutable::now();
+        $jobLedgerModel->status = JobState::Succeeded->value;
+        $jobLedgerModel->finished_at = CarbonImmutable::now();
 
-        if ($model->started_at !== null) {
-            $model->runtime_ms = (int) $model->started_at->diffInMilliseconds($model->finished_at);
+        if ($jobLedgerModel->started_at !== null) {
+            $jobLedgerModel->runtime_ms = (int) $jobLedgerModel->started_at->diffInMilliseconds($jobLedgerModel->finished_at);
         }
     }
 
     public function markFailed(
-        JobLedgerModel $model,
+        JobLedgerModel $jobLedgerModel,
         ?string $failureClass = null,
         ?string $failureMessage = null,
         ?string $failureTrace = null,
     ): void {
-        $model->status = JobState::Failed->value;
-        $model->finished_at = CarbonImmutable::now();
-        $model->failure_class = $failureClass;
-        $model->failure_message = $failureMessage;
-        $model->failure_trace = $failureTrace;
+        $jobLedgerModel->status = JobState::Failed->value;
+        $jobLedgerModel->finished_at = CarbonImmutable::now();
+        $jobLedgerModel->failure_class = $failureClass;
+        $jobLedgerModel->failure_message = $failureMessage;
+        $jobLedgerModel->failure_trace = $failureTrace;
 
-        if ($model->started_at !== null) {
-            $model->runtime_ms = (int) $model->started_at->diffInMilliseconds($model->finished_at);
+        if ($jobLedgerModel->started_at !== null) {
+            $jobLedgerModel->runtime_ms = (int) $jobLedgerModel->started_at->diffInMilliseconds($jobLedgerModel->finished_at);
         }
     }
 
-    public function incrementAttempt(JobLedgerModel $model): void
+    public function incrementAttempt(JobLedgerModel $jobLedgerModel): void
     {
-        $model->attempt++;
+        $jobLedgerModel->attempt++;
     }
 
-    public function toDomain(JobLedgerModel $model): JobRecord
+    public function toDomain(JobLedgerModel $jobLedgerModel): JobRecord
     {
         return JobRecord::reconstitute(
-            id: $this->extractJobId($model),
-            workflowId: $this->extractWorkflowId($model),
-            stepRunId: $this->extractStepRunId($model),
-            jobUuid: $model->job_uuid,
-            jobClass: $model->job_class,
-            queue: $model->queue,
-            status: $this->extractStatus($model),
-            attempt: $model->attempt,
-            dispatchedAt: $model->dispatched_at,
-            startedAt: $model->started_at,
-            finishedAt: $model->finished_at,
-            runtimeMs: $model->runtime_ms,
-            failureClass: $model->failure_class,
-            failureMessage: $model->failure_message,
-            failureTrace: $model->failure_trace,
-            workerId: $model->worker_id,
-            createdAt: $model->created_at,
-            updatedAt: $model->updated_at,
+            jobId: $this->extractJobId($jobLedgerModel),
+            workflowId: $this->extractWorkflowId($jobLedgerModel),
+            stepRunId: $this->extractStepRunId($jobLedgerModel),
+            jobUuid: $jobLedgerModel->job_uuid,
+            jobClass: $jobLedgerModel->job_class,
+            queue: $jobLedgerModel->queue,
+            jobState: $this->extractStatus($jobLedgerModel),
+            attempt: $jobLedgerModel->attempt,
+            dispatchedAt: $jobLedgerModel->dispatched_at,
+            startedAt: $jobLedgerModel->started_at,
+            finishedAt: $jobLedgerModel->finished_at,
+            runtimeMs: $jobLedgerModel->runtime_ms,
+            failureClass: $jobLedgerModel->failure_class,
+            failureMessage: $jobLedgerModel->failure_message,
+            failureTrace: $jobLedgerModel->failure_trace,
+            workerId: $jobLedgerModel->worker_id,
+            createdAt: $jobLedgerModel->created_at,
+            updatedAt: $jobLedgerModel->updated_at,
         );
     }
 
@@ -216,17 +216,17 @@ final readonly class JobLedgerHydrator
         return $model;
     }
 
-    public function updateFromDomain(JobLedgerModel $model, JobRecord $jobRecord): void
+    public function updateFromDomain(JobLedgerModel $jobLedgerModel, JobRecord $jobRecord): void
     {
-        $model->status = $jobRecord->status()->value;
-        $model->attempt = $jobRecord->attempt();
-        $model->started_at = $jobRecord->startedAt();
-        $model->finished_at = $jobRecord->finishedAt();
-        $model->runtime_ms = $jobRecord->runtimeMs();
-        $model->failure_class = $jobRecord->failureClass();
-        $model->failure_message = $jobRecord->failureMessage();
-        $model->failure_trace = $jobRecord->failureTrace();
-        $model->worker_id = $jobRecord->workerId();
-        $model->updated_at = $jobRecord->updatedAt();
+        $jobLedgerModel->status = $jobRecord->status()->value;
+        $jobLedgerModel->attempt = $jobRecord->attempt();
+        $jobLedgerModel->started_at = $jobRecord->startedAt();
+        $jobLedgerModel->finished_at = $jobRecord->finishedAt();
+        $jobLedgerModel->runtime_ms = $jobRecord->runtimeMs();
+        $jobLedgerModel->failure_class = $jobRecord->failureClass();
+        $jobLedgerModel->failure_message = $jobRecord->failureMessage();
+        $jobLedgerModel->failure_trace = $jobRecord->failureTrace();
+        $jobLedgerModel->worker_id = $jobRecord->workerId();
+        $jobLedgerModel->updated_at = $jobRecord->updatedAt();
     }
 }

@@ -122,13 +122,7 @@ abstract class AbstractCollection implements Countable, IteratorAggregate
      */
     final public function any(callable $callback): bool
     {
-        foreach ($this->items as $item) {
-            if ($callback($item)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($this->items, static fn ($item) => $callback($item));
     }
 
     /**
@@ -136,13 +130,7 @@ abstract class AbstractCollection implements Countable, IteratorAggregate
      */
     final public function every(callable $callback): bool
     {
-        foreach ($this->items as $item) {
-            if (! $callback($item)) {
-                return false;
-            }
-        }
-
-        return true;
+        return array_all($this->items, static fn ($item) => $callback($item));
     }
 
     /**

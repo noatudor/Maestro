@@ -6,6 +6,9 @@ namespace Maestro\Workflow\Console\Commands;
 
 use Illuminate\Console\Command;
 use Maestro\Workflow\Application\Job\ZombieJobDetector;
+use Maestro\Workflow\Domain\JobRecord;
+use Maestro\Workflow\Exceptions\InvalidStateTransitionException;
+use Maestro\Workflow\ValueObjects\WorkflowId;
 
 /**
  * Artisan command to detect and handle zombie jobs.
@@ -29,9 +32,9 @@ final class DetectZombieJobsCommand extends Command
     protected $description = 'Detect and mark failed jobs that have exceeded their expected runtime (zombies)';
 
     /**
-     * @throws \Maestro\Workflow\Exceptions\InvalidStateTransitionException
+     * @throws InvalidStateTransitionException
      */
-    public function handle(ZombieJobDetector $detector): int
+    public function handle(ZombieJobDetector $zombieJobDetector): int
     {
         $timeout = (int) $this->option('timeout');
         $detectStale = (bool) $this->option('stale-dispatched');
@@ -39,30 +42,30 @@ final class DetectZombieJobsCommand extends Command
 
         $this->info('Detecting zombie jobs...');
 
-        $result = $detector->detect($timeout);
+        $zombieJobDetectionResult = $zombieJobDetector->detect($timeout);
 
-        if ($result->hasZombies()) {
+        if ($zombieJobDetectionResult->hasZombies()) {
             $this->warn(sprintf(
                 'Found and marked %d zombie job(s) as failed.',
-                $result->markedFailedCount,
+                $zombieJobDetectionResult->markedFailedCount,
             ));
 
             $this->table(
                 ['Job UUID', 'Job Class', 'Workflow ID', 'Started At'],
                 array_map(
-                    static fn ($job) => [
-                        $job->jobUuid,
-                        $job->jobClass,
-                        $job->workflowId->value,
-                        $job->startedAt()?->toIso8601String() ?? 'N/A',
+                    static fn (JobRecord $jobRecord): array => [
+                        $jobRecord->jobUuid,
+                        $jobRecord->jobClass,
+                        $jobRecord->workflowId->value,
+                        $jobRecord->startedAt()?->toIso8601String() ?? 'N/A',
                     ],
-                    $result->detectedJobs,
+                    $zombieJobDetectionResult->detectedJobs,
                 ),
             );
 
             $this->info(sprintf(
                 'Affected workflow IDs: %s',
-                implode(', ', array_map(static fn ($id) => $id->value, $result->affectedWorkflowIds)),
+                implode(', ', array_map(static fn (WorkflowId $workflowId): string => $workflowId->value, $zombieJobDetectionResult->affectedWorkflowIds)),
             ));
         } else {
             $this->info('No zombie jobs detected.');
@@ -72,7 +75,7 @@ final class DetectZombieJobsCommand extends Command
             $this->newLine();
             $this->info('Detecting stale dispatched jobs...');
 
-            $staleResult = $detector->detectStaleDispatched($staleTimeout);
+            $staleResult = $zombieJobDetector->detectStaleDispatched($staleTimeout);
 
             if ($staleResult->hasZombies()) {
                 $this->warn(sprintf(
@@ -83,11 +86,11 @@ final class DetectZombieJobsCommand extends Command
                 $this->table(
                     ['Job UUID', 'Job Class', 'Workflow ID', 'Dispatched At'],
                     array_map(
-                        static fn ($job) => [
-                            $job->jobUuid,
-                            $job->jobClass,
-                            $job->workflowId->value,
-                            $job->dispatchedAt->toIso8601String(),
+                        static fn (JobRecord $jobRecord): array => [
+                            $jobRecord->jobUuid,
+                            $jobRecord->jobClass,
+                            $jobRecord->workflowId->value,
+                            $jobRecord->dispatchedAt->toIso8601String(),
                         ],
                         $staleResult->detectedJobs,
                     ),

@@ -20,24 +20,24 @@ final readonly class SingleJobStepDefinition extends AbstractStepDefinition impl
      * @param class-string<StepOutput>|null $produces
      */
     private function __construct(
-        StepKey $key,
+        StepKey $stepKey,
         string $displayName,
         private string $jobClass,
         array $requires,
         ?string $produces,
         FailurePolicy $failurePolicy,
         RetryConfiguration $retryConfiguration,
-        StepTimeout $timeout,
+        StepTimeout $stepTimeout,
         QueueConfiguration $queueConfiguration,
     ) {
         parent::__construct(
-            $key,
+            $stepKey,
             $displayName,
             $requires,
             $produces,
             $failurePolicy,
             $retryConfiguration,
-            $timeout,
+            $stepTimeout,
             $queueConfiguration,
         );
     }
@@ -48,25 +48,25 @@ final readonly class SingleJobStepDefinition extends AbstractStepDefinition impl
      * @param class-string<StepOutput>|null $produces
      */
     public static function create(
-        StepKey $key,
+        StepKey $stepKey,
         string $displayName,
         string $jobClass,
         array $requires = [],
         ?string $produces = null,
         FailurePolicy $failurePolicy = FailurePolicy::FailWorkflow,
         ?RetryConfiguration $retryConfiguration = null,
-        ?StepTimeout $timeout = null,
+        ?StepTimeout $stepTimeout = null,
         ?QueueConfiguration $queueConfiguration = null,
     ): self {
         return new self(
-            $key,
+            $stepKey,
             $displayName,
             $jobClass,
             $requires,
             $produces,
             $failurePolicy,
             $retryConfiguration ?? RetryConfiguration::default(),
-            $timeout ?? StepTimeout::none(),
+            $stepTimeout ?? StepTimeout::none(),
             $queueConfiguration ?? QueueConfiguration::default(),
         );
     }

@@ -17,19 +17,19 @@ describe('StepFinalizationResult', function (): void {
 
     describe('notReady', function (): void {
         it('creates not finalized result', function (): void {
-            $result = StepFinalizationResult::notReady($this->stepRun);
+            $stepFinalizationResult = StepFinalizationResult::notReady($this->stepRun);
 
-            expect($result->isFinalized())->toBeFalse();
-            expect($result->stepRun())->toBe($this->stepRun);
+            expect($stepFinalizationResult->isFinalized())->toBeFalse();
+            expect($stepFinalizationResult->stepRun())->toBe($this->stepRun);
         });
     });
 
     describe('finalized', function (): void {
         it('creates finalized result', function (): void {
-            $result = StepFinalizationResult::finalized($this->stepRun);
+            $stepFinalizationResult = StepFinalizationResult::finalized($this->stepRun);
 
-            expect($result->isFinalized())->toBeTrue();
-            expect($result->stepRun())->toBe($this->stepRun);
+            expect($stepFinalizationResult->isFinalized())->toBeTrue();
+            expect($stepFinalizationResult->stepRun())->toBe($this->stepRun);
         });
     });
 });

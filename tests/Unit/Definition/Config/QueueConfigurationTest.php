@@ -7,53 +7,53 @@ use Maestro\Workflow\Definition\Config\QueueConfiguration;
 describe('QueueConfiguration', static function (): void {
     describe('create', static function (): void {
         it('creates configuration with all values', function (): void {
-            $config = QueueConfiguration::create('high-priority', 'redis', 30);
+            $queueConfiguration = QueueConfiguration::create('high-priority', 'redis', 30);
 
-            expect($config->queue)->toBe('high-priority');
-            expect($config->connection)->toBe('redis');
-            expect($config->delaySeconds)->toBe(30);
+            expect($queueConfiguration->queue)->toBe('high-priority');
+            expect($queueConfiguration->connection)->toBe('redis');
+            expect($queueConfiguration->delaySeconds)->toBe(30);
         });
 
         it('creates configuration with null values', function (): void {
-            $config = QueueConfiguration::create();
+            $queueConfiguration = QueueConfiguration::create();
 
-            expect($config->queue)->toBeNull();
-            expect($config->connection)->toBeNull();
-            expect($config->delaySeconds)->toBe(0);
+            expect($queueConfiguration->queue)->toBeNull();
+            expect($queueConfiguration->connection)->toBeNull();
+            expect($queueConfiguration->delaySeconds)->toBe(0);
         });
 
         it('enforces non-negative delay', function (): void {
-            $config = QueueConfiguration::create(delaySeconds: -10);
+            $queueConfiguration = QueueConfiguration::create(delaySeconds: -10);
 
-            expect($config->delaySeconds)->toBe(0);
+            expect($queueConfiguration->delaySeconds)->toBe(0);
         });
     });
 
     describe('default', static function (): void {
         it('creates configuration with default values', function (): void {
-            $config = QueueConfiguration::default();
+            $queueConfiguration = QueueConfiguration::default();
 
-            expect($config->queue)->toBeNull();
-            expect($config->connection)->toBeNull();
-            expect($config->delaySeconds)->toBe(0);
+            expect($queueConfiguration->queue)->toBeNull();
+            expect($queueConfiguration->connection)->toBeNull();
+            expect($queueConfiguration->delaySeconds)->toBe(0);
         });
     });
 
     describe('onQueue', static function (): void {
         it('creates configuration with queue only', function (): void {
-            $config = QueueConfiguration::onQueue('emails');
+            $queueConfiguration = QueueConfiguration::onQueue('emails');
 
-            expect($config->queue)->toBe('emails');
-            expect($config->connection)->toBeNull();
+            expect($queueConfiguration->queue)->toBe('emails');
+            expect($queueConfiguration->connection)->toBeNull();
         });
     });
 
     describe('onConnection', static function (): void {
         it('creates configuration with connection only', function (): void {
-            $config = QueueConfiguration::onConnection('sqs');
+            $queueConfiguration = QueueConfiguration::onConnection('sqs');
 
-            expect($config->queue)->toBeNull();
-            expect($config->connection)->toBe('sqs');
+            expect($queueConfiguration->queue)->toBeNull();
+            expect($queueConfiguration->connection)->toBe('sqs');
         });
     });
 
@@ -76,43 +76,43 @@ describe('QueueConfiguration', static function (): void {
 
     describe('with methods', static function (): void {
         it('returns new instance with queue', function (): void {
-            $original = QueueConfiguration::default();
-            $updated = $original->withQueue('high');
+            $queueConfiguration = QueueConfiguration::default();
+            $updated = $queueConfiguration->withQueue('high');
 
             expect($updated->queue)->toBe('high');
-            expect($original->queue)->toBeNull();
+            expect($queueConfiguration->queue)->toBeNull();
         });
 
         it('returns new instance with connection', function (): void {
-            $original = QueueConfiguration::default();
-            $updated = $original->withConnection('redis');
+            $queueConfiguration = QueueConfiguration::default();
+            $updated = $queueConfiguration->withConnection('redis');
 
             expect($updated->connection)->toBe('redis');
-            expect($original->connection)->toBeNull();
+            expect($queueConfiguration->connection)->toBeNull();
         });
 
         it('returns new instance with delay', function (): void {
-            $original = QueueConfiguration::default();
-            $updated = $original->withDelay(60);
+            $queueConfiguration = QueueConfiguration::default();
+            $updated = $queueConfiguration->withDelay(60);
 
             expect($updated->delaySeconds)->toBe(60);
-            expect($original->delaySeconds)->toBe(0);
+            expect($queueConfiguration->delaySeconds)->toBe(0);
         });
     });
 
     describe('equals', static function (): void {
         it('returns true for equal configurations', function (): void {
-            $a = QueueConfiguration::create('high', 'redis', 30);
+            $queueConfiguration = QueueConfiguration::create('high', 'redis', 30);
             $b = QueueConfiguration::create('high', 'redis', 30);
 
-            expect($a->equals($b))->toBeTrue();
+            expect($queueConfiguration->equals($b))->toBeTrue();
         });
 
         it('returns false for different configurations', function (): void {
-            $a = QueueConfiguration::create('high', 'redis', 30);
+            $queueConfiguration = QueueConfiguration::create('high', 'redis', 30);
             $b = QueueConfiguration::create('low', 'redis', 30);
 
-            expect($a->equals($b))->toBeFalse();
+            expect($queueConfiguration->equals($b))->toBeFalse();
         });
     });
 });

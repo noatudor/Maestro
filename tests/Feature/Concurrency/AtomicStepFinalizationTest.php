@@ -26,13 +26,13 @@ describe('Atomic step finalization with real database', function (): void {
             DB::connection(),
         );
 
-        $workflow = WorkflowInstance::create(
+        $workflowInstance = WorkflowInstance::create(
             definitionKey: DefinitionKey::fromString('test-workflow'),
             definitionVersion: DefinitionVersion::fromString('1.0.0'),
         );
-        $workflowRepository->save($workflow);
+        $workflowRepository->save($workflowInstance);
 
-        $this->workflowId = $workflow->id;
+        $this->workflowId = $workflowInstance->id;
     });
 
     describe('finalizeAsSucceeded', function (): void {
@@ -42,7 +42,7 @@ describe('Atomic step finalization with real database', function (): void {
                 stepKey: StepKey::fromString('test-step'),
                 attempt: 1,
             );
-            $stepRun->start(1);
+            $stepRun->start();
             $this->repository->save($stepRun);
 
             $finishedAt = CarbonImmutable::now();
@@ -78,7 +78,7 @@ describe('Atomic step finalization with real database', function (): void {
                 stepKey: StepKey::fromString('test-step'),
                 attempt: 1,
             );
-            $stepRun->start(1);
+            $stepRun->start();
             $this->repository->save($stepRun);
 
             $finishedAt = CarbonImmutable::now();
@@ -97,7 +97,7 @@ describe('Atomic step finalization with real database', function (): void {
                 stepKey: StepKey::fromString('test-step'),
                 attempt: 1,
             );
-            $stepRun->start(1);
+            $stepRun->start();
             $this->repository->save($stepRun);
 
             $finishedAt = CarbonImmutable::now();
@@ -144,7 +144,7 @@ describe('Atomic step finalization with real database', function (): void {
                 stepKey: StepKey::fromString('test-step'),
                 attempt: 1,
             );
-            $stepRun->start(1);
+            $stepRun->start();
             $this->repository->save($stepRun);
 
             $finishedAt = CarbonImmutable::now();
@@ -192,7 +192,7 @@ describe('Atomic step finalization with real database', function (): void {
                 stepKey: StepKey::fromString('test-step'),
                 attempt: 1,
             );
-            $stepRun->start(1);
+            $stepRun->start();
             $this->repository->save($stepRun);
 
             $result = $this->repository->updateStatusAtomically(

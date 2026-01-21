@@ -6,7 +6,9 @@ namespace Maestro\Workflow\Application\Orchestration;
 
 use Maestro\Workflow\Contracts\WorkflowRepository;
 use Maestro\Workflow\Domain\WorkflowInstance;
+use Maestro\Workflow\Exceptions\DefinitionNotFoundException;
 use Maestro\Workflow\Exceptions\InvalidStateTransitionException;
+use Maestro\Workflow\Exceptions\StepDependencyException;
 use Maestro\Workflow\Exceptions\WorkflowLockedException;
 use Maestro\Workflow\Exceptions\WorkflowNotFoundException;
 use Maestro\Workflow\ValueObjects\WorkflowId;
@@ -24,7 +26,7 @@ final readonly class ExternalTriggerHandler
 {
     public function __construct(
         private WorkflowRepository $workflowRepository,
-        private WorkflowAdvancer $advancer,
+        private WorkflowAdvancer $workflowAdvancer,
     ) {}
 
     /**
@@ -32,35 +34,32 @@ final readonly class ExternalTriggerHandler
      *
      * If the workflow is paused, it will be resumed and advanced.
      *
-     * @param array<string, mixed> $payload Optional payload data from the trigger
-     *
      * @throws WorkflowNotFoundException
      * @throws WorkflowLockedException
-     * @throws \Maestro\Workflow\Exceptions\DefinitionNotFoundException
+     * @throws DefinitionNotFoundException
      * @throws InvalidStateTransitionException
-     * @throws \Maestro\Workflow\Exceptions\StepDependencyException
+     * @throws StepDependencyException
      */
     public function handleTrigger(
         WorkflowId $workflowId,
         string $triggerType,
-        array $payload = [],
     ): TriggerResult {
-        $workflow = $this->workflowRepository->findOrFail($workflowId);
+        $workflowInstance = $this->workflowRepository->findOrFail($workflowId);
 
-        if ($workflow->isTerminal()) {
-            return TriggerResult::workflowTerminal($workflow);
+        if ($workflowInstance->isTerminal()) {
+            return TriggerResult::workflowTerminal($workflowInstance);
         }
 
-        if ($workflow->isPaused()) {
+        if ($workflowInstance->isPaused()) {
             try {
-                $workflow->resume();
-                $this->workflowRepository->save($workflow);
+                $workflowInstance->resume();
+                $this->workflowRepository->save($workflowInstance);
             } catch (InvalidStateTransitionException $e) {
-                return TriggerResult::transitionFailed($workflow, $e->getMessage());
+                return TriggerResult::transitionFailed($workflowInstance, $e->getMessage());
             }
         }
 
-        $this->advancer->evaluate($workflowId);
+        $this->workflowAdvancer->evaluate($workflowId);
 
         $updatedWorkflow = $this->workflowRepository->findOrFail($workflowId);
 
@@ -73,19 +72,19 @@ final readonly class ExternalTriggerHandler
      * @throws WorkflowNotFoundException
      * @throws WorkflowLockedException
      * @throws InvalidStateTransitionException
-     * @throws \Maestro\Workflow\Exceptions\DefinitionNotFoundException
-     * @throws \Maestro\Workflow\Exceptions\StepDependencyException
+     * @throws DefinitionNotFoundException
+     * @throws StepDependencyException
      */
     public function resumeAndAdvance(WorkflowId $workflowId): WorkflowInstance
     {
-        $workflow = $this->workflowRepository->findOrFail($workflowId);
+        $workflowInstance = $this->workflowRepository->findOrFail($workflowId);
 
-        if ($workflow->isPaused()) {
-            $workflow->resume();
-            $this->workflowRepository->save($workflow);
+        if ($workflowInstance->isPaused()) {
+            $workflowInstance->resume();
+            $this->workflowRepository->save($workflowInstance);
         }
 
-        $this->advancer->evaluate($workflowId);
+        $this->workflowAdvancer->evaluate($workflowId);
 
         return $this->workflowRepository->findOrFail($workflowId);
     }
@@ -97,14 +96,14 @@ final readonly class ExternalTriggerHandler
      *
      * @throws WorkflowNotFoundException
      * @throws WorkflowLockedException
-     * @throws \Maestro\Workflow\Exceptions\DefinitionNotFoundException
+     * @throws DefinitionNotFoundException
      * @throws InvalidStateTransitionException
-     * @throws \Maestro\Workflow\Exceptions\StepDependencyException
+     * @throws StepDependencyException
      */
     public function triggerEvaluation(WorkflowId $workflowId): WorkflowInstance
     {
         $this->workflowRepository->findOrFail($workflowId);
-        $this->advancer->evaluate($workflowId);
+        $this->workflowAdvancer->evaluate($workflowId);
 
         return $this->workflowRepository->findOrFail($workflowId);
     }

@@ -17,8 +17,8 @@ final readonly class WorkflowContextProviderFactory
         private Container $container,
     ) {}
 
-    public function forWorkflow(WorkflowId $workflowId, WorkflowDefinition $definition): WorkflowContextProvider
+    public function forWorkflow(WorkflowId $workflowId, WorkflowDefinition $workflowDefinition): WorkflowContextProvider
     {
-        return new WorkflowContextProvider($workflowId, $definition, $this->container);
+        return new WorkflowContextProvider($workflowId, $workflowDefinition, $this->container);
     }
 }

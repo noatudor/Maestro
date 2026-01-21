@@ -19,7 +19,7 @@ use Maestro\Workflow\ValueObjects\WorkflowId;
 final readonly class EloquentJobLedgerRepository implements JobLedgerRepository
 {
     public function __construct(
-        private JobLedgerHydrator $hydrator,
+        private JobLedgerHydrator $jobLedgerHydrator,
     ) {}
 
     public function find(JobId $jobId): ?JobRecord
@@ -30,7 +30,7 @@ final readonly class EloquentJobLedgerRepository implements JobLedgerRepository
             return null;
         }
 
-        return $this->hydrator->toDomain($model);
+        return $this->jobLedgerHydrator->toDomain($model);
     }
 
     /**
@@ -40,7 +40,7 @@ final readonly class EloquentJobLedgerRepository implements JobLedgerRepository
     {
         $jobRecord = $this->find($jobId);
 
-        if ($jobRecord === null) {
+        if (! $jobRecord instanceof JobRecord) {
             throw JobNotFoundException::withId($jobId);
         }
 
@@ -52,14 +52,14 @@ final readonly class EloquentJobLedgerRepository implements JobLedgerRepository
         $existingModel = JobLedgerModel::query()->find($jobRecord->id->value);
 
         if ($existingModel !== null) {
-            $this->hydrator->updateFromDomain($existingModel, $jobRecord);
+            $this->jobLedgerHydrator->updateFromDomain($existingModel, $jobRecord);
             $existingModel->save();
 
             return;
         }
 
-        $model = $this->hydrator->fromDomain($jobRecord);
-        $model->save();
+        $jobLedgerModel = $this->jobLedgerHydrator->fromDomain($jobRecord);
+        $jobLedgerModel->save();
     }
 
     public function findByStepRunId(StepRunId $stepRunId): JobRecordCollection
@@ -82,11 +82,11 @@ final readonly class EloquentJobLedgerRepository implements JobLedgerRepository
         return new JobRecordCollection($this->hydrateModels($models->all()));
     }
 
-    public function findByStepRunIdAndState(StepRunId $stepRunId, JobState $state): JobRecordCollection
+    public function findByStepRunIdAndState(StepRunId $stepRunId, JobState $jobState): JobRecordCollection
     {
         $models = JobLedgerModel::query()
             ->forStepRun($stepRunId->value)
-            ->where('status', $state->value)
+            ->where('status', $jobState->value)
             ->get();
 
         return new JobRecordCollection($this->hydrateModels($models->all()));
@@ -99,11 +99,11 @@ final readonly class EloquentJobLedgerRepository implements JobLedgerRepository
             ->count();
     }
 
-    public function countByStepRunIdAndState(StepRunId $stepRunId, JobState $state): int
+    public function countByStepRunIdAndState(StepRunId $stepRunId, JobState $jobState): int
     {
         return JobLedgerModel::query()
             ->forStepRun($stepRunId->value)
-            ->where('status', $state->value)
+            ->where('status', $jobState->value)
             ->count();
     }
 
@@ -117,7 +117,7 @@ final readonly class EloquentJobLedgerRepository implements JobLedgerRepository
             return null;
         }
 
-        return $this->hydrator->toDomain($model);
+        return $this->jobLedgerHydrator->toDomain($model);
     }
 
     public function exists(JobId $jobId): bool
@@ -196,7 +196,7 @@ final readonly class EloquentJobLedgerRepository implements JobLedgerRepository
     {
         $result = [];
         foreach ($models as $model) {
-            $result[] = $this->hydrator->toDomain($model);
+            $result[] = $this->jobLedgerHydrator->toDomain($model);
         }
 
         return $result;

@@ -23,9 +23,9 @@ final readonly class JobContextMiddleware
 {
     public function __construct(
         private WorkflowRepository $workflowRepository,
-        private WorkflowDefinitionRegistry $definitionRegistry,
-        private WorkflowContextProviderFactory $contextProviderFactory,
-        private StepOutputStoreFactory $outputStoreFactory,
+        private WorkflowDefinitionRegistry $workflowDefinitionRegistry,
+        private WorkflowContextProviderFactory $workflowContextProviderFactory,
+        private StepOutputStoreFactory $stepOutputStoreFactory,
     ) {}
 
     /**
@@ -36,25 +36,25 @@ final readonly class JobContextMiddleware
      * @throws WorkflowNotFoundException
      * @throws DefinitionNotFoundException
      */
-    public function handle(OrchestratedJob $job, Closure $next): void
+    public function handle(OrchestratedJob $orchestratedJob, Closure $next): void
     {
-        $workflow = $this->workflowRepository->findOrFail($job->workflowId);
+        $workflowInstance = $this->workflowRepository->findOrFail($orchestratedJob->workflowId);
 
-        $definition = $this->definitionRegistry->get(
-            $workflow->definitionKey,
-            $workflow->definitionVersion,
+        $workflowDefinition = $this->workflowDefinitionRegistry->get(
+            $workflowInstance->definitionKey,
+            $workflowInstance->definitionVersion,
         );
 
-        $contextProvider = $this->contextProviderFactory->forWorkflow(
-            $job->workflowId,
-            $definition,
+        $workflowContextProvider = $this->workflowContextProviderFactory->forWorkflow(
+            $orchestratedJob->workflowId,
+            $workflowDefinition,
         );
 
-        $outputStore = $this->outputStoreFactory->forWorkflow($job->workflowId);
+        $stepOutputStore = $this->stepOutputStoreFactory->forWorkflow($orchestratedJob->workflowId);
 
-        $job->setContextProvider($contextProvider);
-        $job->setOutputStore($outputStore);
+        $orchestratedJob->setContextProvider($workflowContextProvider);
+        $orchestratedJob->setOutputStore($stepOutputStore);
 
-        $next($job);
+        $next($orchestratedJob);
     }
 }

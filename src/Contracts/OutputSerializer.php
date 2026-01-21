@@ -8,7 +8,7 @@ use Maestro\Workflow\Exceptions\SerializationException;
 
 interface OutputSerializer
 {
-    public function serialize(StepOutput $output): string;
+    public function serialize(StepOutput $stepOutput): string;
 
     /**
      * @template T of StepOutput

@@ -46,14 +46,13 @@ describe('StepOutputStore atomic merge', function (): void {
         $repository = new class($this->workflowId, $saveWithAtomicMergeCalled) extends InMemoryStepOutputRepository
         {
             public function __construct(
-                private readonly WorkflowId $expectedWorkflowId,
                 private bool &$saveWithAtomicMergeCalled,
             ) {}
 
-            public function saveWithAtomicMerge(WorkflowId $workflowId, MergeableOutput $output): void
+            public function saveWithAtomicMerge(WorkflowId $workflowId, MergeableOutput $mergeableOutput): void
             {
                 $this->saveWithAtomicMergeCalled = true;
-                parent::saveWithAtomicMerge($workflowId, $output);
+                parent::saveWithAtomicMerge($workflowId, $mergeableOutput);
             }
         };
 
@@ -71,14 +70,13 @@ describe('StepOutputStore atomic merge', function (): void {
         $repository = new class($this->workflowId, $saveWithAtomicMergeCalled) extends InMemoryStepOutputRepository
         {
             public function __construct(
-                private readonly WorkflowId $expectedWorkflowId,
                 private bool &$saveWithAtomicMergeCalled,
             ) {}
 
-            public function saveWithAtomicMerge(WorkflowId $workflowId, MergeableOutput $output): void
+            public function saveWithAtomicMerge(WorkflowId $workflowId, MergeableOutput $mergeableOutput): void
             {
                 $this->saveWithAtomicMergeCalled = true;
-                parent::saveWithAtomicMerge($workflowId, $output);
+                parent::saveWithAtomicMerge($workflowId, $mergeableOutput);
             }
         };
 

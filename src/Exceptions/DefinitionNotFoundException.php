@@ -9,18 +9,18 @@ use Maestro\Workflow\ValueObjects\DefinitionVersion;
 
 final class DefinitionNotFoundException extends ConfigurationException
 {
-    public static function withKey(DefinitionKey $key): self
+    public static function withKey(DefinitionKey $definitionKey): self
     {
         return new self(
-            message: "Workflow definition not found: {$key->toString()}",
+            message: 'Workflow definition not found: '.$definitionKey->toString(),
             code: self::CODE_CONFIGURATION,
         );
     }
 
-    public static function withKeyAndVersion(DefinitionKey $key, DefinitionVersion $version): self
+    public static function withKeyAndVersion(DefinitionKey $definitionKey, DefinitionVersion $definitionVersion): self
     {
         return new self(
-            message: "Workflow definition not found: {$key->toString()} version {$version->toString()}",
+            message: sprintf('Workflow definition not found: %s version %s', $definitionKey->toString(), $definitionVersion->toString()),
             code: self::CODE_CONFIGURATION,
         );
     }

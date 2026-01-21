@@ -60,16 +60,15 @@ describe('OrchestratedJob', function (): void {
         $outputRepository = new InMemoryStepOutputRepository();
         $outputStore = new StepOutputStore($this->workflowId, $outputRepository);
 
-        $definition = WorkflowDefinition::create(
+        $workflowDefinition = WorkflowDefinition::create(
             DefinitionKey::fromString('test-workflow'),
             DefinitionVersion::fromString('1.0.0'),
             'Test Workflow',
             StepCollection::empty(),
-            null,
         );
 
-        $container = Mockery::mock(Container::class);
-        $contextProvider = new WorkflowContextProvider($this->workflowId, $definition, $container);
+        $mock = Mockery::mock(Container::class);
+        $contextProvider = new WorkflowContextProvider($this->workflowId, $workflowDefinition, $mock);
 
         $job->handle($contextProvider, $outputStore);
 
@@ -89,16 +88,15 @@ describe('OrchestratedJob', function (): void {
         $outputRepository = new InMemoryStepOutputRepository();
         $outputStore = new StepOutputStore($this->workflowId, $outputRepository);
 
-        $definition = WorkflowDefinition::create(
+        $workflowDefinition = WorkflowDefinition::create(
             DefinitionKey::fromString('test-workflow'),
             DefinitionVersion::fromString('1.0.0'),
             'Test Workflow',
             StepCollection::empty(),
-            null,
         );
 
-        $container = Mockery::mock(Container::class);
-        $contextProvider = new WorkflowContextProvider($this->workflowId, $definition, $container);
+        $mock = Mockery::mock(Container::class);
+        $contextProvider = new WorkflowContextProvider($this->workflowId, $workflowDefinition, $mock);
 
         $job->handle($contextProvider, $outputStore);
 
@@ -112,16 +110,15 @@ describe('OrchestratedJob', function (): void {
             $this->jobUuid,
         );
 
-        $definition = WorkflowDefinition::create(
+        $workflowDefinition = WorkflowDefinition::create(
             DefinitionKey::fromString('test-workflow'),
             DefinitionVersion::fromString('1.0.0'),
             'Test Workflow',
             StepCollection::empty(),
-            null,
         );
 
-        $container = Mockery::mock(Container::class);
-        $contextProvider = new WorkflowContextProvider($this->workflowId, $definition, $container);
+        $mock = Mockery::mock(Container::class);
+        $contextProvider = new WorkflowContextProvider($this->workflowId, $workflowDefinition, $mock);
 
         $job->setContextProvider($contextProvider);
 

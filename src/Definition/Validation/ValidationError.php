@@ -17,12 +17,12 @@ final readonly class ValidationError
         public ?StepKey $stepKey,
     ) {}
 
-    public static function duplicateStepKey(StepKey $key): self
+    public static function duplicateStepKey(StepKey $stepKey): self
     {
         return new self(
             code: 'DUPLICATE_STEP_KEY',
-            message: "Duplicate step key: {$key->toString()}",
-            stepKey: $key,
+            message: 'Duplicate step key: '.$stepKey->toString(),
+            stepKey: $stepKey,
         );
     }
 
@@ -30,7 +30,7 @@ final readonly class ValidationError
     {
         return new self(
             code: 'MISSING_REQUIRED_OUTPUT',
-            message: "Step '{$stepKey->toString()}' requires output '{$outputClass}' but no prior step produces it",
+            message: sprintf("Step '%s' requires output '%s' but no prior step produces it", $stepKey->toString(), $outputClass),
             stepKey: $stepKey,
         );
     }
@@ -39,7 +39,7 @@ final readonly class ValidationError
     {
         return new self(
             code: 'JOB_CLASS_NOT_FOUND',
-            message: "Step '{$stepKey->toString()}' references non-existent job class: {$jobClass}",
+            message: sprintf("Step '%s' references non-existent job class: %s", $stepKey->toString(), $jobClass),
             stepKey: $stepKey,
         );
     }
@@ -48,7 +48,7 @@ final readonly class ValidationError
     {
         return new self(
             code: 'OUTPUT_CLASS_NOT_FOUND',
-            message: "Step '{$stepKey->toString()}' references non-existent output class: {$outputClass}",
+            message: sprintf("Step '%s' references non-existent output class: %s", $stepKey->toString(), $outputClass),
             stepKey: $stepKey,
         );
     }
@@ -57,7 +57,7 @@ final readonly class ValidationError
     {
         return new self(
             code: 'CONTEXT_LOADER_NOT_FOUND',
-            message: "Context loader class not found: {$loaderClass}",
+            message: 'Context loader class not found: '.$loaderClass,
             stepKey: null,
         );
     }
@@ -78,6 +78,6 @@ final readonly class ValidationError
 
     public function hasStepContext(): bool
     {
-        return $this->stepKey !== null;
+        return $this->stepKey instanceof StepKey;
     }
 }

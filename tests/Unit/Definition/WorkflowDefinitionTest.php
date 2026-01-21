@@ -15,7 +15,7 @@ use Maestro\Workflow\ValueObjects\StepKey;
 
 describe('WorkflowDefinition', static function (): void {
     beforeEach(function (): void {
-        $step1 = SingleJobStepBuilder::create('step-one')
+        $singleJobStepDefinition = SingleJobStepBuilder::create('step-one')
             ->job(TestJob::class)
             ->produces(TestOutput::class)
             ->build();
@@ -32,11 +32,11 @@ describe('WorkflowDefinition', static function (): void {
             ->build();
 
         $this->definition = WorkflowDefinition::create(
+            displayName: 'Test Workflow',
+            contextLoaderClass: TestContextLoader::class,
             key: DefinitionKey::fromString('test-workflow'),
             version: DefinitionVersion::fromString('1.0.0'),
-            displayName: 'Test Workflow',
-            steps: StepCollection::fromArray([$step1, $step2, $step3]),
-            contextLoaderClass: TestContextLoader::class,
+            steps: StepCollection::fromArray([$singleJobStepDefinition, $step2, $step3]),
         );
     });
 
@@ -72,14 +72,14 @@ describe('WorkflowDefinition', static function (): void {
         });
 
         it('returns false when context loader is null', function (): void {
-            $definition = WorkflowDefinition::create(
+            $workflowDefinition = WorkflowDefinition::create(
+                displayName: 'Test',
                 key: DefinitionKey::fromString('test'),
                 version: DefinitionVersion::initial(),
-                displayName: 'Test',
                 steps: StepCollection::empty(),
             );
 
-            expect($definition->hasContextLoader())->toBeFalse();
+            expect($workflowDefinition->hasContextLoader())->toBeFalse();
         });
     });
 

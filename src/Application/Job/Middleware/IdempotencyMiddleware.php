@@ -7,6 +7,7 @@ namespace Maestro\Workflow\Application\Job\Middleware;
 use Closure;
 use Maestro\Workflow\Application\Job\OrchestratedJob;
 use Maestro\Workflow\Contracts\JobLedgerRepository;
+use Maestro\Workflow\Domain\JobRecord;
 
 /**
  * Middleware that prevents duplicate job execution.
@@ -18,7 +19,7 @@ use Maestro\Workflow\Contracts\JobLedgerRepository;
 final readonly class IdempotencyMiddleware
 {
     public function __construct(
-        private JobLedgerRepository $jobLedger,
+        private JobLedgerRepository $jobLedgerRepository,
     ) {}
 
     /**
@@ -26,14 +27,14 @@ final readonly class IdempotencyMiddleware
      *
      * @param Closure(OrchestratedJob): void $next
      */
-    public function handle(OrchestratedJob $job, Closure $next): void
+    public function handle(OrchestratedJob $orchestratedJob, Closure $next): void
     {
-        $existingJob = $this->jobLedger->findByJobUuid($job->jobUuid);
+        $existingJob = $this->jobLedgerRepository->findByJobUuid($orchestratedJob->jobUuid);
 
-        if ($existingJob !== null && $existingJob->isTerminal()) {
+        if ($existingJob instanceof JobRecord && $existingJob->isTerminal()) {
             return;
         }
 
-        $next($job);
+        $next($orchestratedJob);
     }
 }

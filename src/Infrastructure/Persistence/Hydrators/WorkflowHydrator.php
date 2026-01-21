@@ -7,6 +7,9 @@ namespace Maestro\Workflow\Infrastructure\Persistence\Hydrators;
 use Carbon\CarbonImmutable;
 use Maestro\Workflow\Domain\WorkflowInstance;
 use Maestro\Workflow\Enums\WorkflowState;
+use Maestro\Workflow\Exceptions\InvalidDefinitionKeyException;
+use Maestro\Workflow\Exceptions\InvalidDefinitionVersionException;
+use Maestro\Workflow\Exceptions\InvalidStepKeyException;
 use Maestro\Workflow\Infrastructure\Persistence\Models\WorkflowModel;
 use Maestro\Workflow\ValueObjects\DefinitionKey;
 use Maestro\Workflow\ValueObjects\DefinitionVersion;
@@ -37,72 +40,72 @@ final readonly class WorkflowHydrator
         return $model;
     }
 
-    public function extractWorkflowId(WorkflowModel $model): WorkflowId
+    public function extractWorkflowId(WorkflowModel $workflowModel): WorkflowId
     {
-        return WorkflowId::fromString($model->id);
+        return WorkflowId::fromString($workflowModel->id);
     }
 
     /**
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionKeyException
+     * @throws InvalidDefinitionKeyException
      */
-    public function extractDefinitionKey(WorkflowModel $model): DefinitionKey
+    public function extractDefinitionKey(WorkflowModel $workflowModel): DefinitionKey
     {
-        return DefinitionKey::fromString($model->definition_key);
+        return DefinitionKey::fromString($workflowModel->definition_key);
     }
 
     /**
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionVersionException
+     * @throws InvalidDefinitionVersionException
      */
-    public function extractDefinitionVersion(WorkflowModel $model): DefinitionVersion
+    public function extractDefinitionVersion(WorkflowModel $workflowModel): DefinitionVersion
     {
-        return DefinitionVersion::fromString($model->definition_version);
+        return DefinitionVersion::fromString($workflowModel->definition_version);
     }
 
-    public function extractState(WorkflowModel $model): WorkflowState
+    public function extractState(WorkflowModel $workflowModel): WorkflowState
     {
-        return WorkflowState::from($model->state);
+        return WorkflowState::from($workflowModel->state);
     }
 
     /**
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidStepKeyException
      */
-    public function extractCurrentStepKey(WorkflowModel $model): ?StepKey
+    public function extractCurrentStepKey(WorkflowModel $workflowModel): ?StepKey
     {
-        if ($model->current_step_key === null) {
+        if ($workflowModel->current_step_key === null) {
             return null;
         }
 
-        return StepKey::fromString($model->current_step_key);
+        return StepKey::fromString($workflowModel->current_step_key);
     }
 
-    public function extractPausedAt(WorkflowModel $model): ?CarbonImmutable
+    public function extractPausedAt(WorkflowModel $workflowModel): ?CarbonImmutable
     {
-        return $model->paused_at;
+        return $workflowModel->paused_at;
     }
 
-    public function extractFailedAt(WorkflowModel $model): ?CarbonImmutable
+    public function extractFailedAt(WorkflowModel $workflowModel): ?CarbonImmutable
     {
-        return $model->failed_at;
+        return $workflowModel->failed_at;
     }
 
-    public function extractSucceededAt(WorkflowModel $model): ?CarbonImmutable
+    public function extractSucceededAt(WorkflowModel $workflowModel): ?CarbonImmutable
     {
-        return $model->succeeded_at;
+        return $workflowModel->succeeded_at;
     }
 
-    public function extractCancelledAt(WorkflowModel $model): ?CarbonImmutable
+    public function extractCancelledAt(WorkflowModel $workflowModel): ?CarbonImmutable
     {
-        return $model->cancelled_at;
+        return $workflowModel->cancelled_at;
     }
 
-    public function extractCreatedAt(WorkflowModel $model): CarbonImmutable
+    public function extractCreatedAt(WorkflowModel $workflowModel): CarbonImmutable
     {
-        return $model->created_at;
+        return $workflowModel->created_at;
     }
 
-    public function extractUpdatedAt(WorkflowModel $model): CarbonImmutable
+    public function extractUpdatedAt(WorkflowModel $workflowModel): CarbonImmutable
     {
-        return $model->updated_at;
+        return $workflowModel->updated_at;
     }
 
     /**
@@ -125,132 +128,132 @@ final readonly class WorkflowHydrator
      *     updated_at: CarbonImmutable,
      * }
      *
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionKeyException
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionVersionException
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidDefinitionKeyException
+     * @throws InvalidDefinitionVersionException
+     * @throws InvalidStepKeyException
      */
-    public function extractAll(WorkflowModel $model): array
+    public function extractAll(WorkflowModel $workflowModel): array
     {
         return [
-            'id' => $this->extractWorkflowId($model),
-            'definition_key' => $this->extractDefinitionKey($model),
-            'definition_version' => $this->extractDefinitionVersion($model),
-            'state' => $this->extractState($model),
-            'current_step_key' => $this->extractCurrentStepKey($model),
-            'paused_at' => $model->paused_at,
-            'paused_reason' => $model->paused_reason,
-            'failed_at' => $model->failed_at,
-            'failure_code' => $model->failure_code,
-            'failure_message' => $model->failure_message,
-            'succeeded_at' => $model->succeeded_at,
-            'cancelled_at' => $model->cancelled_at,
-            'locked_by' => $model->locked_by,
-            'locked_at' => $model->locked_at,
-            'created_at' => $model->created_at,
-            'updated_at' => $model->updated_at,
+            'id' => $this->extractWorkflowId($workflowModel),
+            'definition_key' => $this->extractDefinitionKey($workflowModel),
+            'definition_version' => $this->extractDefinitionVersion($workflowModel),
+            'state' => $this->extractState($workflowModel),
+            'current_step_key' => $this->extractCurrentStepKey($workflowModel),
+            'paused_at' => $workflowModel->paused_at,
+            'paused_reason' => $workflowModel->paused_reason,
+            'failed_at' => $workflowModel->failed_at,
+            'failure_code' => $workflowModel->failure_code,
+            'failure_message' => $workflowModel->failure_message,
+            'succeeded_at' => $workflowModel->succeeded_at,
+            'cancelled_at' => $workflowModel->cancelled_at,
+            'locked_by' => $workflowModel->locked_by,
+            'locked_at' => $workflowModel->locked_at,
+            'created_at' => $workflowModel->created_at,
+            'updated_at' => $workflowModel->updated_at,
         ];
     }
 
-    public function updateState(WorkflowModel $model, WorkflowState $state): void
+    public function updateState(WorkflowModel $workflowModel, WorkflowState $workflowState): void
     {
-        $model->state = $state->value;
+        $workflowModel->state = $workflowState->value;
     }
 
-    public function updateCurrentStepKey(WorkflowModel $model, ?StepKey $stepKey): void
+    public function updateCurrentStepKey(WorkflowModel $workflowModel, ?StepKey $stepKey): void
     {
-        $model->current_step_key = $stepKey?->value;
+        $workflowModel->current_step_key = $stepKey?->value;
     }
 
-    public function markPaused(WorkflowModel $model, ?string $reason = null): void
+    public function markPaused(WorkflowModel $workflowModel, ?string $reason = null): void
     {
-        $model->state = WorkflowState::Paused->value;
-        $model->paused_at = CarbonImmutable::now();
-        $model->paused_reason = $reason;
+        $workflowModel->state = WorkflowState::Paused->value;
+        $workflowModel->paused_at = CarbonImmutable::now();
+        $workflowModel->paused_reason = $reason;
     }
 
-    public function markFailed(WorkflowModel $model, ?string $code = null, ?string $message = null): void
+    public function markFailed(WorkflowModel $workflowModel, ?string $code = null, ?string $message = null): void
     {
-        $model->state = WorkflowState::Failed->value;
-        $model->failed_at = CarbonImmutable::now();
-        $model->failure_code = $code;
-        $model->failure_message = $message;
+        $workflowModel->state = WorkflowState::Failed->value;
+        $workflowModel->failed_at = CarbonImmutable::now();
+        $workflowModel->failure_code = $code;
+        $workflowModel->failure_message = $message;
     }
 
-    public function markSucceeded(WorkflowModel $model): void
+    public function markSucceeded(WorkflowModel $workflowModel): void
     {
-        $model->state = WorkflowState::Succeeded->value;
-        $model->succeeded_at = CarbonImmutable::now();
+        $workflowModel->state = WorkflowState::Succeeded->value;
+        $workflowModel->succeeded_at = CarbonImmutable::now();
     }
 
-    public function markCancelled(WorkflowModel $model): void
+    public function markCancelled(WorkflowModel $workflowModel): void
     {
-        $model->state = WorkflowState::Cancelled->value;
-        $model->cancelled_at = CarbonImmutable::now();
+        $workflowModel->state = WorkflowState::Cancelled->value;
+        $workflowModel->cancelled_at = CarbonImmutable::now();
     }
 
     /**
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionKeyException
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionVersionException
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidDefinitionKeyException
+     * @throws InvalidDefinitionVersionException
+     * @throws InvalidStepKeyException
      */
-    public function toDomain(WorkflowModel $model): WorkflowInstance
+    public function toDomain(WorkflowModel $workflowModel): WorkflowInstance
     {
         return WorkflowInstance::reconstitute(
-            id: $this->extractWorkflowId($model),
-            definitionKey: $this->extractDefinitionKey($model),
-            definitionVersion: $this->extractDefinitionVersion($model),
-            state: $this->extractState($model),
-            currentStepKey: $this->extractCurrentStepKey($model),
-            pausedAt: $model->paused_at,
-            pausedReason: $model->paused_reason,
-            failedAt: $model->failed_at,
-            failureCode: $model->failure_code,
-            failureMessage: $model->failure_message,
-            succeededAt: $model->succeeded_at,
-            cancelledAt: $model->cancelled_at,
-            lockedBy: $model->locked_by,
-            lockedAt: $model->locked_at,
-            createdAt: $model->created_at,
-            updatedAt: $model->updated_at,
+            workflowId: $this->extractWorkflowId($workflowModel),
+            definitionKey: $this->extractDefinitionKey($workflowModel),
+            definitionVersion: $this->extractDefinitionVersion($workflowModel),
+            workflowState: $this->extractState($workflowModel),
+            currentStepKey: $this->extractCurrentStepKey($workflowModel),
+            pausedAt: $workflowModel->paused_at,
+            pausedReason: $workflowModel->paused_reason,
+            failedAt: $workflowModel->failed_at,
+            failureCode: $workflowModel->failure_code,
+            failureMessage: $workflowModel->failure_message,
+            succeededAt: $workflowModel->succeeded_at,
+            cancelledAt: $workflowModel->cancelled_at,
+            lockedBy: $workflowModel->locked_by,
+            lockedAt: $workflowModel->locked_at,
+            createdAt: $workflowModel->created_at,
+            updatedAt: $workflowModel->updated_at,
         );
     }
 
-    public function fromDomain(WorkflowInstance $workflow): WorkflowModel
+    public function fromDomain(WorkflowInstance $workflowInstance): WorkflowModel
     {
         $model = new WorkflowModel();
-        $model->id = $workflow->id->value;
-        $model->definition_key = $workflow->definitionKey->value;
-        $model->definition_version = $workflow->definitionVersion->toString();
-        $model->state = $workflow->state()->value;
-        $model->current_step_key = $workflow->currentStepKey()?->value;
-        $model->paused_at = $workflow->pausedAt();
-        $model->paused_reason = $workflow->pausedReason();
-        $model->failed_at = $workflow->failedAt();
-        $model->failure_code = $workflow->failureCode();
-        $model->failure_message = $workflow->failureMessage();
-        $model->succeeded_at = $workflow->succeededAt();
-        $model->cancelled_at = $workflow->cancelledAt();
-        $model->locked_by = $workflow->lockedBy();
-        $model->locked_at = $workflow->lockedAt();
-        $model->created_at = $workflow->createdAt;
-        $model->updated_at = $workflow->updatedAt();
+        $model->id = $workflowInstance->id->value;
+        $model->definition_key = $workflowInstance->definitionKey->value;
+        $model->definition_version = $workflowInstance->definitionVersion->toString();
+        $model->state = $workflowInstance->state()->value;
+        $model->current_step_key = $workflowInstance->currentStepKey()?->value;
+        $model->paused_at = $workflowInstance->pausedAt();
+        $model->paused_reason = $workflowInstance->pausedReason();
+        $model->failed_at = $workflowInstance->failedAt();
+        $model->failure_code = $workflowInstance->failureCode();
+        $model->failure_message = $workflowInstance->failureMessage();
+        $model->succeeded_at = $workflowInstance->succeededAt();
+        $model->cancelled_at = $workflowInstance->cancelledAt();
+        $model->locked_by = $workflowInstance->lockedBy();
+        $model->locked_at = $workflowInstance->lockedAt();
+        $model->created_at = $workflowInstance->createdAt;
+        $model->updated_at = $workflowInstance->updatedAt();
 
         return $model;
     }
 
-    public function updateFromDomain(WorkflowModel $model, WorkflowInstance $workflow): void
+    public function updateFromDomain(WorkflowModel $workflowModel, WorkflowInstance $workflowInstance): void
     {
-        $model->state = $workflow->state()->value;
-        $model->current_step_key = $workflow->currentStepKey()?->value;
-        $model->paused_at = $workflow->pausedAt();
-        $model->paused_reason = $workflow->pausedReason();
-        $model->failed_at = $workflow->failedAt();
-        $model->failure_code = $workflow->failureCode();
-        $model->failure_message = $workflow->failureMessage();
-        $model->succeeded_at = $workflow->succeededAt();
-        $model->cancelled_at = $workflow->cancelledAt();
-        $model->locked_by = $workflow->lockedBy();
-        $model->locked_at = $workflow->lockedAt();
-        $model->updated_at = $workflow->updatedAt();
+        $workflowModel->state = $workflowInstance->state()->value;
+        $workflowModel->current_step_key = $workflowInstance->currentStepKey()?->value;
+        $workflowModel->paused_at = $workflowInstance->pausedAt();
+        $workflowModel->paused_reason = $workflowInstance->pausedReason();
+        $workflowModel->failed_at = $workflowInstance->failedAt();
+        $workflowModel->failure_code = $workflowInstance->failureCode();
+        $workflowModel->failure_message = $workflowInstance->failureMessage();
+        $workflowModel->succeeded_at = $workflowInstance->succeededAt();
+        $workflowModel->cancelled_at = $workflowInstance->cancelledAt();
+        $workflowModel->locked_by = $workflowInstance->lockedBy();
+        $workflowModel->locked_at = $workflowInstance->lockedAt();
+        $workflowModel->updated_at = $workflowInstance->updatedAt();
     }
 }

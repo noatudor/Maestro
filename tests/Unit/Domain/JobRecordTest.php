@@ -22,7 +22,7 @@ describe('JobRecord', static function (): void {
     });
 
     afterEach(function (): void {
-        CarbonImmutable::setTestNow(null);
+        CarbonImmutable::setTestNow();
     });
 
     describe('creation', static function (): void {
@@ -47,17 +47,17 @@ describe('JobRecord', static function (): void {
         });
 
         it('creates with a provided job id', function (): void {
-            $id = JobId::generate();
+            $jobId = JobId::generate();
             $jobRecord = JobRecord::create(
                 $this->workflowId,
                 $this->stepRunId,
                 $this->jobUuid,
                 $this->jobClass,
                 $this->queue,
-                $id,
+                $jobId,
             );
 
-            expect($jobRecord->id)->toBe($id);
+            expect($jobRecord->id)->toBe($jobId);
         });
 
         it('generates job id if not provided', function (): void {
@@ -146,7 +146,7 @@ describe('JobRecord', static function (): void {
             );
             $jobRecord->start();
 
-            expect(fn () => $jobRecord->start())
+            expect(static fn () => $jobRecord->start())
                 ->toThrow(InvalidStateTransitionException::class);
         });
 
@@ -159,7 +159,7 @@ describe('JobRecord', static function (): void {
                 $this->queue,
             );
 
-            expect(fn () => $jobRecord->succeed())
+            expect(static fn () => $jobRecord->succeed())
                 ->toThrow(InvalidStateTransitionException::class);
         });
 
@@ -174,7 +174,7 @@ describe('JobRecord', static function (): void {
             $jobRecord->start();
             $jobRecord->succeed();
 
-            expect(fn () => $jobRecord->fail())
+            expect(static fn () => $jobRecord->fail())
                 ->toThrow(InvalidStateTransitionException::class);
         });
     });
@@ -241,19 +241,17 @@ describe('JobRecord', static function (): void {
 
     describe('reconstitution', static function (): void {
         it('reconstitutes from persisted data', function (): void {
-            $id = JobId::generate();
+            $jobId = JobId::generate();
             $now = CarbonImmutable::now();
             $started = $now->addSeconds(1);
             $finished = $now->addSeconds(2);
 
             $jobRecord = JobRecord::reconstitute(
-                id: $id,
                 workflowId: $this->workflowId,
                 stepRunId: $this->stepRunId,
                 jobUuid: $this->jobUuid,
                 jobClass: $this->jobClass,
                 queue: $this->queue,
-                status: JobState::Succeeded,
                 attempt: 2,
                 dispatchedAt: $now,
                 startedAt: $started,
@@ -265,9 +263,11 @@ describe('JobRecord', static function (): void {
                 workerId: 'worker-1',
                 createdAt: $now,
                 updatedAt: $finished,
+                id: $jobId,
+                status: JobState::Succeeded,
             );
 
-            expect($jobRecord->id)->toBe($id)
+            expect($jobRecord->id)->toBe($jobId)
                 ->and($jobRecord->status())->toBe(JobState::Succeeded)
                 ->and($jobRecord->attempt())->toBe(2)
                 ->and($jobRecord->runtimeMs())->toBe(1000)

@@ -20,5 +20,5 @@ interface IdempotencyKeyGenerator
      * The key should be deterministic - calling this method multiple times
      * with the same job should return the same key.
      */
-    public function generate(OrchestratedJob $job): string;
+    public function generate(OrchestratedJob $orchestratedJob): string;
 }

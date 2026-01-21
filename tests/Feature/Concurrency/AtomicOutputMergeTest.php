@@ -27,13 +27,13 @@ describe('Atomic output merge with real database', function (): void {
             DB::connection(),
         );
 
-        $workflow = WorkflowInstance::create(
+        $workflowInstance = WorkflowInstance::create(
             definitionKey: DefinitionKey::fromString('test-workflow'),
             definitionVersion: DefinitionVersion::fromString('1.0.0'),
         );
-        $workflowRepository->save($workflow);
+        $workflowRepository->save($workflowInstance);
 
-        $this->workflowId = $workflow->id;
+        $this->workflowId = $workflowInstance->id;
     });
 
     describe('non-mergeable outputs', function (): void {
@@ -138,11 +138,11 @@ describe('Atomic output merge with real database', function (): void {
                 DB::connection(),
             );
 
-            $workflow1 = WorkflowInstance::create(
+            $workflowInstance = WorkflowInstance::create(
                 definitionKey: DefinitionKey::fromString('test-workflow-1'),
                 definitionVersion: DefinitionVersion::fromString('1.0.0'),
             );
-            $workflowRepository->save($workflow1);
+            $workflowRepository->save($workflowInstance);
 
             $workflow2 = WorkflowInstance::create(
                 definitionKey: DefinitionKey::fromString('test-workflow-2'),
@@ -151,12 +151,12 @@ describe('Atomic output merge with real database', function (): void {
             $workflowRepository->save($workflow2);
 
             $output1 = new MergeableTestOutput(['workflow1-item']);
-            $this->repository->saveWithAtomicMerge($workflow1->id, $output1);
+            $this->repository->saveWithAtomicMerge($workflowInstance->id, $output1);
 
             $output2 = new MergeableTestOutput(['workflow2-item']);
             $this->repository->saveWithAtomicMerge($workflow2->id, $output2);
 
-            $retrieved1 = $this->repository->find($workflow1->id, MergeableTestOutput::class);
+            $retrieved1 = $this->repository->find($workflowInstance->id, MergeableTestOutput::class);
             $retrieved2 = $this->repository->find($workflow2->id, MergeableTestOutput::class);
 
             expect($retrieved1->items)->toBe(['workflow1-item']);

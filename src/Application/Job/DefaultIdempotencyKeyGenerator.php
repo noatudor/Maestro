@@ -14,10 +14,10 @@ use Maestro\Workflow\Contracts\IdempotencyKeyGenerator;
  */
 final readonly class DefaultIdempotencyKeyGenerator implements IdempotencyKeyGenerator
 {
-    private const PREFIX = 'maestro:job:';
+    private const string PREFIX = 'maestro:job:';
 
-    public function generate(OrchestratedJob $job): string
+    public function generate(OrchestratedJob $orchestratedJob): string
     {
-        return self::PREFIX.$job->jobUuid;
+        return self::PREFIX.$orchestratedJob->jobUuid;
     }
 }

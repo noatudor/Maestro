@@ -6,6 +6,7 @@ namespace Maestro\Workflow\Definition;
 
 use Maestro\Workflow\Exceptions\DefinitionNotFoundException;
 use Maestro\Workflow\Exceptions\DuplicateDefinitionException;
+use Maestro\Workflow\Exceptions\InvalidDefinitionKeyException;
 use Maestro\Workflow\ValueObjects\DefinitionKey;
 use Maestro\Workflow\ValueObjects\DefinitionVersion;
 
@@ -31,38 +32,38 @@ final class WorkflowDefinitionRegistry
     /**
      * @throws DuplicateDefinitionException
      */
-    public function register(WorkflowDefinition $definition): void
+    public function register(WorkflowDefinition $workflowDefinition): void
     {
-        $identifier = $definition->identifier();
+        $identifier = $workflowDefinition->identifier();
 
         if (isset($this->definitions[$identifier])) {
             throw DuplicateDefinitionException::withKeyAndVersion(
-                $definition->key(),
-                $definition->version(),
+                $workflowDefinition->key(),
+                $workflowDefinition->version(),
             );
         }
 
-        $this->definitions[$identifier] = $definition;
-        $this->updateLatestVersion($definition);
+        $this->definitions[$identifier] = $workflowDefinition;
+        $this->updateLatestVersion($workflowDefinition);
     }
 
     /**
      * @throws DefinitionNotFoundException
      */
-    public function get(DefinitionKey $key, DefinitionVersion $version): WorkflowDefinition
+    public function get(DefinitionKey $definitionKey, DefinitionVersion $definitionVersion): WorkflowDefinition
     {
-        $identifier = $key->toString().':'.$version->toString();
+        $identifier = $definitionKey->toString().':'.$definitionVersion->toString();
 
         if (! isset($this->definitions[$identifier])) {
-            throw DefinitionNotFoundException::withKeyAndVersion($key, $version);
+            throw DefinitionNotFoundException::withKeyAndVersion($definitionKey, $definitionVersion);
         }
 
         return $this->definitions[$identifier];
     }
 
-    public function find(DefinitionKey $key, DefinitionVersion $version): ?WorkflowDefinition
+    public function find(DefinitionKey $definitionKey, DefinitionVersion $definitionVersion): ?WorkflowDefinition
     {
-        $identifier = $key->toString().':'.$version->toString();
+        $identifier = $definitionKey->toString().':'.$definitionVersion->toString();
 
         return $this->definitions[$identifier] ?? null;
     }
@@ -70,42 +71,42 @@ final class WorkflowDefinitionRegistry
     /**
      * @throws DefinitionNotFoundException
      */
-    public function getLatest(DefinitionKey $key): WorkflowDefinition
+    public function getLatest(DefinitionKey $definitionKey): WorkflowDefinition
     {
-        $keyString = $key->toString();
+        $keyString = $definitionKey->toString();
 
         if (! isset($this->latestVersions[$keyString])) {
-            throw DefinitionNotFoundException::withKey($key);
+            throw DefinitionNotFoundException::withKey($definitionKey);
         }
 
-        return $this->get($key, $this->latestVersions[$keyString]);
+        return $this->get($definitionKey, $this->latestVersions[$keyString]);
     }
 
-    public function findLatest(DefinitionKey $key): ?WorkflowDefinition
+    public function findLatest(DefinitionKey $definitionKey): ?WorkflowDefinition
     {
-        $keyString = $key->toString();
+        $keyString = $definitionKey->toString();
 
         if (! isset($this->latestVersions[$keyString])) {
             return null;
         }
 
-        return $this->find($key, $this->latestVersions[$keyString]);
+        return $this->find($definitionKey, $this->latestVersions[$keyString]);
     }
 
-    public function has(DefinitionKey $key, ?DefinitionVersion $version = null): bool
+    public function has(DefinitionKey $definitionKey, ?DefinitionVersion $definitionVersion = null): bool
     {
-        if ($version === null) {
-            return isset($this->latestVersions[$key->toString()]);
+        if (! $definitionVersion instanceof DefinitionVersion) {
+            return isset($this->latestVersions[$definitionKey->toString()]);
         }
 
-        $identifier = $key->toString().':'.$version->toString();
+        $identifier = $definitionKey->toString().':'.$definitionVersion->toString();
 
         return isset($this->definitions[$identifier]);
     }
 
-    public function hasKey(DefinitionKey $key): bool
+    public function hasKey(DefinitionKey $definitionKey): bool
     {
-        return isset($this->latestVersions[$key->toString()]);
+        return isset($this->latestVersions[$definitionKey->toString()]);
     }
 
     /**
@@ -113,9 +114,9 @@ final class WorkflowDefinitionRegistry
      *
      * @return list<WorkflowDefinition>
      */
-    public function getAllVersions(DefinitionKey $key): array
+    public function getAllVersions(DefinitionKey $definitionKey): array
     {
-        $keyString = $key->toString();
+        $keyString = $definitionKey->toString();
         $versions = [];
 
         foreach ($this->definitions as $identifier => $definition) {
@@ -132,12 +133,12 @@ final class WorkflowDefinitionRegistry
     /**
      * @return list<DefinitionKey>
      *
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionKeyException
+     * @throws InvalidDefinitionKeyException
      */
     public function allKeys(): array
     {
         return array_map(
-            static fn (string $keyString): DefinitionKey => DefinitionKey::fromString($keyString),
+            DefinitionKey::fromString(...),
             array_keys($this->latestVersions),
         );
     }
@@ -146,12 +147,12 @@ final class WorkflowDefinitionRegistry
      * @return list<WorkflowDefinition>
      *
      * @throws DefinitionNotFoundException
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionKeyException
+     * @throws InvalidDefinitionKeyException
      */
     public function allLatest(): array
     {
         return array_map(
-            fn (DefinitionKey $key): WorkflowDefinition => $this->getLatest($key),
+            $this->getLatest(...),
             $this->allKeys(),
         );
     }
@@ -185,19 +186,19 @@ final class WorkflowDefinitionRegistry
         $this->latestVersions = [];
     }
 
-    private function updateLatestVersion(WorkflowDefinition $definition): void
+    private function updateLatestVersion(WorkflowDefinition $workflowDefinition): void
     {
-        $keyString = $definition->key()->toString();
+        $keyString = $workflowDefinition->key()->toString();
 
         if (! isset($this->latestVersions[$keyString])) {
-            $this->latestVersions[$keyString] = $definition->version();
+            $this->latestVersions[$keyString] = $workflowDefinition->version();
 
             return;
         }
 
         $currentLatest = $this->latestVersions[$keyString];
-        if ($definition->version()->isNewerThan($currentLatest)) {
-            $this->latestVersions[$keyString] = $definition->version();
+        if ($workflowDefinition->version()->isNewerThan($currentLatest)) {
+            $this->latestVersions[$keyString] = $workflowDefinition->version();
         }
     }
 }

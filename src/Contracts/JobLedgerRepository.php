@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Maestro\Workflow\Domain\Collections\JobRecordCollection;
 use Maestro\Workflow\Domain\JobRecord;
 use Maestro\Workflow\Enums\JobState;
+use Maestro\Workflow\Exceptions\JobNotFoundException;
 use Maestro\Workflow\ValueObjects\JobId;
 use Maestro\Workflow\ValueObjects\StepRunId;
 use Maestro\Workflow\ValueObjects\WorkflowId;
@@ -22,16 +23,16 @@ interface JobLedgerRepository
 
     public function findByWorkflowId(WorkflowId $workflowId): JobRecordCollection;
 
-    public function findByStepRunIdAndState(StepRunId $stepRunId, JobState $state): JobRecordCollection;
+    public function findByStepRunIdAndState(StepRunId $stepRunId, JobState $jobState): JobRecordCollection;
 
     public function countByStepRunId(StepRunId $stepRunId): int;
 
-    public function countByStepRunIdAndState(StepRunId $stepRunId, JobState $state): int;
+    public function countByStepRunIdAndState(StepRunId $stepRunId, JobState $jobState): int;
 
     public function findByJobUuid(string $jobUuid): ?JobRecord;
 
     /**
-     * @throws \Maestro\Workflow\Exceptions\JobNotFoundException
+     * @throws JobNotFoundException
      */
     public function findOrFail(JobId $jobId): JobRecord;
 

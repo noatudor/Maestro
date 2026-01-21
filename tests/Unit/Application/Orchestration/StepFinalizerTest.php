@@ -31,13 +31,13 @@ describe('StepFinalizer', function (): void {
     describe('tryFinalize', function (): void {
         it('returns not ready when step is not running', function (): void {
             $stepRun = StepRun::create($this->workflowId, $this->stepKey);
-            $stepDefinition = SingleJobStepDefinition::create(
+            $singleJobStepDefinition = SingleJobStepDefinition::create(
                 $this->stepKey,
                 'Test Step',
                 TestJob::class,
             );
 
-            $result = $this->finalizer->tryFinalize($stepRun, $stepDefinition);
+            $result = $this->finalizer->tryFinalize($stepRun, $singleJobStepDefinition);
 
             expect($result->isFinalized())->toBeFalse();
         });
@@ -50,13 +50,13 @@ describe('StepFinalizer', function (): void {
             createSucceededJob($this->jobLedgerRepository, $stepRun, 'job-1');
             createRunningJob($this->jobLedgerRepository, $stepRun, 'job-2');
 
-            $stepDefinition = SingleJobStepDefinition::create(
+            $singleJobStepDefinition = SingleJobStepDefinition::create(
                 $this->stepKey,
                 'Test Step',
                 TestJob::class,
             );
 
-            $result = $this->finalizer->tryFinalize($stepRun, $stepDefinition);
+            $result = $this->finalizer->tryFinalize($stepRun, $singleJobStepDefinition);
 
             expect($result->isFinalized())->toBeFalse();
         });
@@ -69,13 +69,13 @@ describe('StepFinalizer', function (): void {
             createSucceededJob($this->jobLedgerRepository, $stepRun, 'job-1');
             createSucceededJob($this->jobLedgerRepository, $stepRun, 'job-2');
 
-            $stepDefinition = SingleJobStepDefinition::create(
+            $singleJobStepDefinition = SingleJobStepDefinition::create(
                 $this->stepKey,
                 'Test Step',
                 TestJob::class,
             );
 
-            $result = $this->finalizer->tryFinalize($stepRun, $stepDefinition);
+            $result = $this->finalizer->tryFinalize($stepRun, $singleJobStepDefinition);
 
             expect($result->isFinalized())->toBeTrue();
             expect($result->stepRun()->isSucceeded())->toBeTrue();
@@ -88,13 +88,13 @@ describe('StepFinalizer', function (): void {
 
             createFailedJob($this->jobLedgerRepository, $stepRun, 'job-1');
 
-            $stepDefinition = SingleJobStepDefinition::create(
+            $singleJobStepDefinition = SingleJobStepDefinition::create(
                 $this->stepKey,
                 'Test Step',
                 TestJob::class,
             );
 
-            $result = $this->finalizer->tryFinalize($stepRun, $stepDefinition);
+            $result = $this->finalizer->tryFinalize($stepRun, $singleJobStepDefinition);
 
             expect($result->isFinalized())->toBeTrue();
             expect($result->stepRun()->isFailed())->toBeTrue();
@@ -107,13 +107,13 @@ describe('StepFinalizer', function (): void {
 
             createSucceededJob($this->jobLedgerRepository, $stepRun, 'job-1');
 
-            $stepDefinition = SingleJobStepDefinition::create(
+            $singleJobStepDefinition = SingleJobStepDefinition::create(
                 $this->stepKey,
                 'Test Step',
                 TestJob::class,
             );
 
-            $this->finalizer->tryFinalize($stepRun, $stepDefinition);
+            $this->finalizer->tryFinalize($stepRun, $singleJobStepDefinition);
 
             $savedStepRun = $this->stepRunRepository->find($stepRun->id);
             expect($savedStepRun?->isSucceeded())->toBeTrue();
@@ -130,9 +130,9 @@ describe('StepFinalizer', function (): void {
             createSucceededJob($this->jobLedgerRepository, $stepRun, 'job-2');
             createSucceededJob($this->jobLedgerRepository, $stepRun, 'job-3');
 
-            $stepDefinition = createFanOutStep($this->stepKey, SuccessCriteria::All);
+            $fanOutStepDefinition = createFanOutStep($this->stepKey, SuccessCriteria::All);
 
-            $result = $this->finalizer->tryFinalize($stepRun, $stepDefinition);
+            $result = $this->finalizer->tryFinalize($stepRun, $fanOutStepDefinition);
 
             expect($result->stepRun()->isSucceeded())->toBeTrue();
         });
@@ -146,9 +146,9 @@ describe('StepFinalizer', function (): void {
             createSucceededJob($this->jobLedgerRepository, $stepRun, 'job-2');
             createFailedJob($this->jobLedgerRepository, $stepRun, 'job-3');
 
-            $stepDefinition = createFanOutStep($this->stepKey, SuccessCriteria::All);
+            $fanOutStepDefinition = createFanOutStep($this->stepKey, SuccessCriteria::All);
 
-            $result = $this->finalizer->tryFinalize($stepRun, $stepDefinition);
+            $result = $this->finalizer->tryFinalize($stepRun, $fanOutStepDefinition);
 
             expect($result->stepRun()->isFailed())->toBeTrue();
         });
@@ -162,9 +162,9 @@ describe('StepFinalizer', function (): void {
             createSucceededJob($this->jobLedgerRepository, $stepRun, 'job-2');
             createFailedJob($this->jobLedgerRepository, $stepRun, 'job-3');
 
-            $stepDefinition = createFanOutStep($this->stepKey, SuccessCriteria::Majority);
+            $fanOutStepDefinition = createFanOutStep($this->stepKey, SuccessCriteria::Majority);
 
-            $result = $this->finalizer->tryFinalize($stepRun, $stepDefinition);
+            $result = $this->finalizer->tryFinalize($stepRun, $fanOutStepDefinition);
 
             expect($result->stepRun()->isSucceeded())->toBeTrue();
         });
@@ -178,9 +178,9 @@ describe('StepFinalizer', function (): void {
             createFailedJob($this->jobLedgerRepository, $stepRun, 'job-2');
             createFailedJob($this->jobLedgerRepository, $stepRun, 'job-3');
 
-            $stepDefinition = createFanOutStep($this->stepKey, SuccessCriteria::Majority);
+            $fanOutStepDefinition = createFanOutStep($this->stepKey, SuccessCriteria::Majority);
 
-            $result = $this->finalizer->tryFinalize($stepRun, $stepDefinition);
+            $result = $this->finalizer->tryFinalize($stepRun, $fanOutStepDefinition);
 
             expect($result->stepRun()->isFailed())->toBeTrue();
         });
@@ -194,9 +194,9 @@ describe('StepFinalizer', function (): void {
             createFailedJob($this->jobLedgerRepository, $stepRun, 'job-2');
             createFailedJob($this->jobLedgerRepository, $stepRun, 'job-3');
 
-            $stepDefinition = createFanOutStep($this->stepKey, SuccessCriteria::BestEffort);
+            $fanOutStepDefinition = createFanOutStep($this->stepKey, SuccessCriteria::BestEffort);
 
-            $result = $this->finalizer->tryFinalize($stepRun, $stepDefinition);
+            $result = $this->finalizer->tryFinalize($stepRun, $fanOutStepDefinition);
 
             expect($result->stepRun()->isSucceeded())->toBeTrue();
         });
@@ -212,9 +212,9 @@ describe('StepFinalizer', function (): void {
             createFailedJob($this->jobLedgerRepository, $stepRun, 'job-4');
             createFailedJob($this->jobLedgerRepository, $stepRun, 'job-5');
 
-            $stepDefinition = createFanOutStep($this->stepKey, NOfMCriteria::atLeast(3));
+            $fanOutStepDefinition = createFanOutStep($this->stepKey, NOfMCriteria::atLeast(3));
 
-            $result = $this->finalizer->tryFinalize($stepRun, $stepDefinition);
+            $result = $this->finalizer->tryFinalize($stepRun, $fanOutStepDefinition);
 
             expect($result->stepRun()->isSucceeded())->toBeTrue();
         });
@@ -230,9 +230,9 @@ describe('StepFinalizer', function (): void {
             createFailedJob($this->jobLedgerRepository, $stepRun, 'job-4');
             createFailedJob($this->jobLedgerRepository, $stepRun, 'job-5');
 
-            $stepDefinition = createFanOutStep($this->stepKey, NOfMCriteria::atLeast(3));
+            $fanOutStepDefinition = createFanOutStep($this->stepKey, NOfMCriteria::atLeast(3));
 
-            $result = $this->finalizer->tryFinalize($stepRun, $stepDefinition);
+            $result = $this->finalizer->tryFinalize($stepRun, $fanOutStepDefinition);
 
             expect($result->stepRun()->isFailed())->toBeTrue();
         });
@@ -279,57 +279,57 @@ describe('StepFinalizer', function (): void {
     });
 });
 
-function createSucceededJob(InMemoryJobLedgerRepository $repository, StepRun $stepRun, string $jobUuid): void
+function createSucceededJob(InMemoryJobLedgerRepository $inMemoryJobLedgerRepository, StepRun $stepRun, string $jobUuid): void
 {
-    $job = JobRecord::create(
+    $jobRecord = JobRecord::create(
         $stepRun->workflowId,
         $stepRun->id,
         $jobUuid,
         TestJob::class,
         'default',
     );
-    $job->start('worker-1');
-    $job->succeed();
-    $repository->save($job);
+    $jobRecord->start('worker-1');
+    $jobRecord->succeed();
+    $inMemoryJobLedgerRepository->save($jobRecord);
 }
 
-function createFailedJob(InMemoryJobLedgerRepository $repository, StepRun $stepRun, string $jobUuid): void
+function createFailedJob(InMemoryJobLedgerRepository $inMemoryJobLedgerRepository, StepRun $stepRun, string $jobUuid): void
 {
-    $job = JobRecord::create(
+    $jobRecord = JobRecord::create(
         $stepRun->workflowId,
         $stepRun->id,
         $jobUuid,
         TestJob::class,
         'default',
     );
-    $job->start('worker-1');
-    $job->fail('Error', 'Test error');
-    $repository->save($job);
+    $jobRecord->start('worker-1');
+    $jobRecord->fail('Error', 'Test error');
+    $inMemoryJobLedgerRepository->save($jobRecord);
 }
 
-function createRunningJob(InMemoryJobLedgerRepository $repository, StepRun $stepRun, string $jobUuid): void
+function createRunningJob(InMemoryJobLedgerRepository $inMemoryJobLedgerRepository, StepRun $stepRun, string $jobUuid): void
 {
-    $job = JobRecord::create(
+    $jobRecord = JobRecord::create(
         $stepRun->workflowId,
         $stepRun->id,
         $jobUuid,
         TestJob::class,
         'default',
     );
-    $job->start('worker-1');
-    $repository->save($job);
+    $jobRecord->start('worker-1');
+    $inMemoryJobLedgerRepository->save($jobRecord);
 }
 
-function createDispatchedJob(InMemoryJobLedgerRepository $repository, StepRun $stepRun, string $jobUuid): void
+function createDispatchedJob(InMemoryJobLedgerRepository $inMemoryJobLedgerRepository, StepRun $stepRun, string $jobUuid): void
 {
-    $job = JobRecord::create(
+    $jobRecord = JobRecord::create(
         $stepRun->workflowId,
         $stepRun->id,
         $jobUuid,
         TestJob::class,
         'default',
     );
-    $repository->save($job);
+    $inMemoryJobLedgerRepository->save($jobRecord);
 }
 
 function createFanOutStep(StepKey $stepKey, SuccessCriteria|NOfMCriteria $criteria): FanOutStepDefinition
@@ -338,7 +338,7 @@ function createFanOutStep(StepKey $stepKey, SuccessCriteria|NOfMCriteria $criter
         $stepKey,
         'Test Fan-Out Step',
         TestJob::class,
-        static fn () => [],
+        static fn (): array => [],
         successCriteria: $criteria,
     );
 }

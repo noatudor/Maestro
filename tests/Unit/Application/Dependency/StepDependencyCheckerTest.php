@@ -19,94 +19,94 @@ describe('StepDependencyChecker', function (): void {
 
     describe('areDependenciesMet', function (): void {
         it('returns true when step has no dependencies', function (): void {
-            $step = SingleJobStepBuilder::create('step-1')
+            $singleJobStepDefinition = SingleJobStepBuilder::create('step-1')
                 ->job(TestJob::class)
                 ->displayName('Step 1')
                 ->build();
 
-            expect($this->checker->areDependenciesMet($this->workflowId, $step))->toBeTrue();
+            expect($this->checker->areDependenciesMet($this->workflowId, $singleJobStepDefinition))->toBeTrue();
         });
 
         it('returns true when all dependencies exist', function (): void {
             $this->repository->save($this->workflowId, new TestOutput('value'));
             $this->repository->save($this->workflowId, new AnotherOutput(42));
 
-            $step = SingleJobStepBuilder::create('step-1')
+            $singleJobStepDefinition = SingleJobStepBuilder::create('step-1')
                 ->job(TestJob::class)
                 ->displayName('Step 1')
                 ->requires(TestOutput::class, AnotherOutput::class)
                 ->build();
 
-            expect($this->checker->areDependenciesMet($this->workflowId, $step))->toBeTrue();
+            expect($this->checker->areDependenciesMet($this->workflowId, $singleJobStepDefinition))->toBeTrue();
         });
 
         it('returns false when any dependency is missing', function (): void {
             $this->repository->save($this->workflowId, new TestOutput('value'));
 
-            $step = SingleJobStepBuilder::create('step-1')
+            $singleJobStepDefinition = SingleJobStepBuilder::create('step-1')
                 ->job(TestJob::class)
                 ->displayName('Step 1')
                 ->requires(TestOutput::class, AnotherOutput::class)
                 ->build();
 
-            expect($this->checker->areDependenciesMet($this->workflowId, $step))->toBeFalse();
+            expect($this->checker->areDependenciesMet($this->workflowId, $singleJobStepDefinition))->toBeFalse();
         });
 
         it('returns false when no dependencies exist', function (): void {
-            $step = SingleJobStepBuilder::create('step-1')
+            $singleJobStepDefinition = SingleJobStepBuilder::create('step-1')
                 ->job(TestJob::class)
                 ->displayName('Step 1')
                 ->requires(TestOutput::class)
                 ->build();
 
-            expect($this->checker->areDependenciesMet($this->workflowId, $step))->toBeFalse();
+            expect($this->checker->areDependenciesMet($this->workflowId, $singleJobStepDefinition))->toBeFalse();
         });
     });
 
     describe('getMissingDependencies', function (): void {
         it('returns empty array when step has no dependencies', function (): void {
-            $step = SingleJobStepBuilder::create('step-1')
+            $singleJobStepDefinition = SingleJobStepBuilder::create('step-1')
                 ->job(TestJob::class)
                 ->displayName('Step 1')
                 ->build();
 
-            expect($this->checker->getMissingDependencies($this->workflowId, $step))->toBe([]);
+            expect($this->checker->getMissingDependencies($this->workflowId, $singleJobStepDefinition))->toBe([]);
         });
 
         it('returns empty array when all dependencies exist', function (): void {
             $this->repository->save($this->workflowId, new TestOutput('value'));
 
-            $step = SingleJobStepBuilder::create('step-1')
+            $singleJobStepDefinition = SingleJobStepBuilder::create('step-1')
                 ->job(TestJob::class)
                 ->displayName('Step 1')
                 ->requires(TestOutput::class)
                 ->build();
 
-            expect($this->checker->getMissingDependencies($this->workflowId, $step))->toBe([]);
+            expect($this->checker->getMissingDependencies($this->workflowId, $singleJobStepDefinition))->toBe([]);
         });
 
         it('returns missing dependencies', function (): void {
             $this->repository->save($this->workflowId, new TestOutput('value'));
 
-            $step = SingleJobStepBuilder::create('step-1')
+            $singleJobStepDefinition = SingleJobStepBuilder::create('step-1')
                 ->job(TestJob::class)
                 ->displayName('Step 1')
                 ->requires(TestOutput::class, AnotherOutput::class)
                 ->build();
 
-            $missing = $this->checker->getMissingDependencies($this->workflowId, $step);
+            $missing = $this->checker->getMissingDependencies($this->workflowId, $singleJobStepDefinition);
 
             expect($missing)->toBe([AnotherOutput::class]);
         });
 
         it('returns all dependencies when none exist', function (): void {
-            $step = SingleJobStepBuilder::create('step-1')
+            $singleJobStepDefinition = SingleJobStepBuilder::create('step-1')
                 ->job(TestJob::class)
                 ->displayName('Step 1')
                 ->requires(TestOutput::class, AnotherOutput::class)
                 ->build();
 
-            $missing = $this->checker->getMissingDependencies($this->workflowId, $step);
+            $missing = $this->checker->getMissingDependencies($this->workflowId, $singleJobStepDefinition);
 
             expect($missing)->toBe([TestOutput::class, AnotherOutput::class]);
         });
@@ -114,25 +114,25 @@ describe('StepDependencyChecker', function (): void {
 
     describe('getSatisfiedDependencies', function (): void {
         it('returns empty array when step has no dependencies', function (): void {
-            $step = SingleJobStepBuilder::create('step-1')
+            $singleJobStepDefinition = SingleJobStepBuilder::create('step-1')
                 ->job(TestJob::class)
                 ->displayName('Step 1')
                 ->build();
 
-            expect($this->checker->getSatisfiedDependencies($this->workflowId, $step))->toBe([]);
+            expect($this->checker->getSatisfiedDependencies($this->workflowId, $singleJobStepDefinition))->toBe([]);
         });
 
         it('returns all dependencies when all exist', function (): void {
             $this->repository->save($this->workflowId, new TestOutput('value'));
             $this->repository->save($this->workflowId, new AnotherOutput(42));
 
-            $step = SingleJobStepBuilder::create('step-1')
+            $singleJobStepDefinition = SingleJobStepBuilder::create('step-1')
                 ->job(TestJob::class)
                 ->displayName('Step 1')
                 ->requires(TestOutput::class, AnotherOutput::class)
                 ->build();
 
-            $satisfied = $this->checker->getSatisfiedDependencies($this->workflowId, $step);
+            $satisfied = $this->checker->getSatisfiedDependencies($this->workflowId, $singleJobStepDefinition);
 
             expect($satisfied)->toBe([TestOutput::class, AnotherOutput::class]);
         });
@@ -140,25 +140,25 @@ describe('StepDependencyChecker', function (): void {
         it('returns only satisfied dependencies', function (): void {
             $this->repository->save($this->workflowId, new TestOutput('value'));
 
-            $step = SingleJobStepBuilder::create('step-1')
+            $singleJobStepDefinition = SingleJobStepBuilder::create('step-1')
                 ->job(TestJob::class)
                 ->displayName('Step 1')
                 ->requires(TestOutput::class, AnotherOutput::class)
                 ->build();
 
-            $satisfied = $this->checker->getSatisfiedDependencies($this->workflowId, $step);
+            $satisfied = $this->checker->getSatisfiedDependencies($this->workflowId, $singleJobStepDefinition);
 
             expect($satisfied)->toBe([TestOutput::class]);
         });
 
         it('returns empty array when no dependencies are satisfied', function (): void {
-            $step = SingleJobStepBuilder::create('step-1')
+            $singleJobStepDefinition = SingleJobStepBuilder::create('step-1')
                 ->job(TestJob::class)
                 ->displayName('Step 1')
                 ->requires(TestOutput::class, AnotherOutput::class)
                 ->build();
 
-            expect($this->checker->getSatisfiedDependencies($this->workflowId, $step))->toBe([]);
+            expect($this->checker->getSatisfiedDependencies($this->workflowId, $singleJobStepDefinition))->toBe([]);
         });
     });
 
@@ -167,14 +167,14 @@ describe('StepDependencyChecker', function (): void {
             $workflowId2 = WorkflowId::generate();
             $this->repository->save($this->workflowId, new TestOutput('value'));
 
-            $step = SingleJobStepBuilder::create('step-1')
+            $singleJobStepDefinition = SingleJobStepBuilder::create('step-1')
                 ->job(TestJob::class)
                 ->displayName('Step 1')
                 ->requires(TestOutput::class)
                 ->build();
 
-            expect($this->checker->areDependenciesMet($this->workflowId, $step))->toBeTrue();
-            expect($this->checker->areDependenciesMet($workflowId2, $step))->toBeFalse();
+            expect($this->checker->areDependenciesMet($this->workflowId, $singleJobStepDefinition))->toBeTrue();
+            expect($this->checker->areDependenciesMet($workflowId2, $singleJobStepDefinition))->toBeFalse();
         });
     });
 });

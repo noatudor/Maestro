@@ -9,10 +9,10 @@ use Maestro\Workflow\ValueObjects\DefinitionVersion;
 
 final class DuplicateDefinitionException extends ConfigurationException
 {
-    public static function withKeyAndVersion(DefinitionKey $key, DefinitionVersion $version): self
+    public static function withKeyAndVersion(DefinitionKey $definitionKey, DefinitionVersion $definitionVersion): self
     {
         return new self(
-            message: "Workflow definition already registered: {$key->toString()} version {$version->toString()}",
+            message: sprintf('Workflow definition already registered: %s version %s', $definitionKey->toString(), $definitionVersion->toString()),
             code: self::CODE_CONFIGURATION,
         );
     }

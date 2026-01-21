@@ -19,7 +19,7 @@ describe('StepRun', static function (): void {
     });
 
     afterEach(function (): void {
-        CarbonImmutable::setTestNow(null);
+        CarbonImmutable::setTestNow();
     });
 
     describe('creation', static function (): void {
@@ -48,10 +48,10 @@ describe('StepRun', static function (): void {
         });
 
         it('creates with a provided step run id', function (): void {
-            $id = StepRunId::generate();
-            $stepRun = StepRun::create($this->workflowId, $this->stepKey, id: $id);
+            $stepRunId = StepRunId::generate();
+            $stepRun = StepRun::create($this->workflowId, $this->stepKey, id: $stepRunId);
 
-            expect($stepRun->id)->toBe($id);
+            expect($stepRun->id)->toBe($stepRunId);
         });
 
         it('generates step run id if not provided', function (): void {
@@ -104,14 +104,14 @@ describe('StepRun', static function (): void {
             $stepRun = StepRun::create($this->workflowId, $this->stepKey);
             $stepRun->start();
 
-            expect(fn () => $stepRun->start())
+            expect(static fn () => $stepRun->start())
                 ->toThrow(InvalidStateTransitionException::class);
         });
 
         it('throws when succeeding a pending step run', function (): void {
             $stepRun = StepRun::create($this->workflowId, $this->stepKey);
 
-            expect(fn () => $stepRun->succeed())
+            expect(static fn () => $stepRun->succeed())
                 ->toThrow(InvalidStateTransitionException::class);
         });
 
@@ -120,7 +120,7 @@ describe('StepRun', static function (): void {
             $stepRun->start();
             $stepRun->succeed();
 
-            expect(fn () => $stepRun->fail())
+            expect(static fn () => $stepRun->fail())
                 ->toThrow(InvalidStateTransitionException::class);
         });
     });
@@ -228,15 +228,13 @@ describe('StepRun', static function (): void {
 
     describe('reconstitution', static function (): void {
         it('reconstitutes from persisted data', function (): void {
-            $id = StepRunId::generate();
+            $stepRunId = StepRunId::generate();
             $now = CarbonImmutable::now();
 
             $stepRun = StepRun::reconstitute(
-                id: $id,
                 workflowId: $this->workflowId,
                 stepKey: $this->stepKey,
                 attempt: 2,
-                status: StepState::Running,
                 startedAt: $now,
                 finishedAt: null,
                 failureCode: null,
@@ -246,9 +244,11 @@ describe('StepRun', static function (): void {
                 totalJobCount: 5,
                 createdAt: $now,
                 updatedAt: $now,
+                id: $stepRunId,
+                status: StepState::Running,
             );
 
-            expect($stepRun->id)->toBe($id)
+            expect($stepRun->id)->toBe($stepRunId)
                 ->and($stepRun->attempt)->toBe(2)
                 ->and($stepRun->status())->toBe(StepState::Running)
                 ->and($stepRun->failedJobCount())->toBe(1)

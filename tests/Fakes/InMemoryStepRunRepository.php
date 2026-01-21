@@ -34,7 +34,7 @@ class InMemoryStepRunRepository implements StepRunRepository
     {
         $stepRun = $this->find($stepRunId);
 
-        if ($stepRun === null) {
+        if (! $stepRun instanceof StepRun) {
             throw StepNotFoundException::withId($stepRunId);
         }
 
@@ -50,7 +50,7 @@ class InMemoryStepRunRepository implements StepRunRepository
     {
         $stepRuns = array_filter(
             $this->stepRuns,
-            static fn (StepRun $run) => $run->workflowId->value === $workflowId->value,
+            static fn (StepRun $stepRun): bool => $stepRun->workflowId->value === $workflowId->value,
         );
 
         return new StepRunCollection(array_values($stepRuns));
@@ -72,25 +72,25 @@ class InMemoryStepRunRepository implements StepRunRepository
     {
         $matching = array_filter(
             $this->stepRuns,
-            static fn (StepRun $run) => $run->workflowId->value === $workflowId->value
-                && $run->stepKey->value === $stepKey->value,
+            static fn (StepRun $stepRun): bool => $stepRun->workflowId->value === $workflowId->value
+                && $stepRun->stepKey->value === $stepKey->value,
         );
 
-        if (empty($matching)) {
+        if ($matching === []) {
             return null;
         }
 
-        usort($matching, static fn (StepRun $a, StepRun $b) => $b->attempt <=> $a->attempt);
+        usort($matching, static fn (StepRun $a, StepRun $b): int => $b->attempt <=> $a->attempt);
 
         return $matching[0];
     }
 
-    public function findByWorkflowIdAndState(WorkflowId $workflowId, StepState $state): StepRunCollection
+    public function findByWorkflowIdAndState(WorkflowId $workflowId, StepState $stepState): StepRunCollection
     {
         $stepRuns = array_filter(
             $this->stepRuns,
-            static fn (StepRun $run) => $run->workflowId->value === $workflowId->value
-                && $run->status() === $state,
+            static fn (StepRun $stepRun): bool => $stepRun->workflowId->value === $workflowId->value
+                && $stepRun->status() === $stepState,
         );
 
         return new StepRunCollection(array_values($stepRuns));
@@ -100,7 +100,7 @@ class InMemoryStepRunRepository implements StepRunRepository
     {
         $stepRun = $this->find($stepRunId);
 
-        if ($stepRun === null || $stepRun->status() !== $fromState) {
+        if (! $stepRun instanceof StepRun || $stepRun->status() !== $fromState) {
             return false;
         }
 
@@ -121,7 +121,7 @@ class InMemoryStepRunRepository implements StepRunRepository
     {
         $stepRun = $this->find($stepRunId);
 
-        if ($stepRun === null || $stepRun->status() !== StepState::Running) {
+        if (! $stepRun instanceof StepRun || $stepRun->status() !== StepState::Running) {
             return false;
         }
 
@@ -140,7 +140,7 @@ class InMemoryStepRunRepository implements StepRunRepository
     ): bool {
         $stepRun = $this->find($stepRunId);
 
-        if ($stepRun === null || $stepRun->status() !== StepState::Running) {
+        if (! $stepRun instanceof StepRun || $stepRun->status() !== StepState::Running) {
             return false;
         }
 

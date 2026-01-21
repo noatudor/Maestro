@@ -5,10 +5,15 @@ declare(strict_types=1);
 namespace Maestro\Workflow\Infrastructure\Persistence\Repositories;
 
 use Carbon\CarbonImmutable;
+use Deprecated;
 use Illuminate\Database\Connection;
+use Illuminate\Database\QueryException;
 use Maestro\Workflow\Contracts\WorkflowRepository;
 use Maestro\Workflow\Domain\WorkflowInstance;
 use Maestro\Workflow\Enums\WorkflowState;
+use Maestro\Workflow\Exceptions\InvalidDefinitionKeyException;
+use Maestro\Workflow\Exceptions\InvalidDefinitionVersionException;
+use Maestro\Workflow\Exceptions\InvalidStepKeyException;
 use Maestro\Workflow\Exceptions\WorkflowLockedException;
 use Maestro\Workflow\Exceptions\WorkflowNotFoundException;
 use Maestro\Workflow\Infrastructure\Persistence\Hydrators\WorkflowHydrator;
@@ -18,14 +23,14 @@ use Maestro\Workflow\ValueObjects\WorkflowId;
 final readonly class EloquentWorkflowRepository implements WorkflowRepository
 {
     public function __construct(
-        private WorkflowHydrator $hydrator,
+        private WorkflowHydrator $workflowHydrator,
         private Connection $connection,
     ) {}
 
     /**
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionKeyException
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionVersionException
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidDefinitionKeyException
+     * @throws InvalidDefinitionVersionException
+     * @throws InvalidStepKeyException
      */
     public function find(WorkflowId $workflowId): ?WorkflowInstance
     {
@@ -35,39 +40,39 @@ final readonly class EloquentWorkflowRepository implements WorkflowRepository
             return null;
         }
 
-        return $this->hydrator->toDomain($model);
+        return $this->workflowHydrator->toDomain($model);
     }
 
     /**
      * @throws WorkflowNotFoundException
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionKeyException
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionVersionException
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidDefinitionKeyException
+     * @throws InvalidDefinitionVersionException
+     * @throws InvalidStepKeyException
      */
     public function findOrFail(WorkflowId $workflowId): WorkflowInstance
     {
         $workflow = $this->find($workflowId);
 
-        if ($workflow === null) {
+        if (! $workflow instanceof WorkflowInstance) {
             throw WorkflowNotFoundException::withId($workflowId);
         }
 
         return $workflow;
     }
 
-    public function save(WorkflowInstance $workflow): void
+    public function save(WorkflowInstance $workflowInstance): void
     {
-        $existingModel = WorkflowModel::query()->find($workflow->id->value);
+        $existingModel = WorkflowModel::query()->find($workflowInstance->id->value);
 
         if ($existingModel !== null) {
-            $this->hydrator->updateFromDomain($existingModel, $workflow);
+            $this->workflowHydrator->updateFromDomain($existingModel, $workflowInstance);
             $existingModel->save();
 
             return;
         }
 
-        $model = $this->hydrator->fromDomain($workflow);
-        $model->save();
+        $workflowModel = $this->workflowHydrator->fromDomain($workflowInstance);
+        $workflowModel->save();
     }
 
     public function delete(WorkflowId $workflowId): void
@@ -80,9 +85,9 @@ final readonly class EloquentWorkflowRepository implements WorkflowRepository
     /**
      * @return array<string, WorkflowInstance>
      *
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionKeyException
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionVersionException
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidDefinitionKeyException
+     * @throws InvalidDefinitionVersionException
+     * @throws InvalidStepKeyException
      */
     public function findByState(WorkflowState $workflowState): array
     {
@@ -92,7 +97,7 @@ final readonly class EloquentWorkflowRepository implements WorkflowRepository
 
         $result = [];
         foreach ($models as $model) {
-            $result[$model->id] = $this->hydrator->toDomain($model);
+            $result[$model->id] = $this->workflowHydrator->toDomain($model);
         }
 
         return $result;
@@ -108,9 +113,9 @@ final readonly class EloquentWorkflowRepository implements WorkflowRepository
     /**
      * @return list<WorkflowInstance>
      *
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionKeyException
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionVersionException
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidDefinitionKeyException
+     * @throws InvalidDefinitionVersionException
+     * @throws InvalidStepKeyException
      */
     public function findRunning(): array
     {
@@ -120,9 +125,9 @@ final readonly class EloquentWorkflowRepository implements WorkflowRepository
     /**
      * @return list<WorkflowInstance>
      *
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionKeyException
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionVersionException
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidDefinitionKeyException
+     * @throws InvalidDefinitionVersionException
+     * @throws InvalidStepKeyException
      */
     public function findPaused(): array
     {
@@ -132,9 +137,9 @@ final readonly class EloquentWorkflowRepository implements WorkflowRepository
     /**
      * @return list<WorkflowInstance>
      *
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionKeyException
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionVersionException
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidDefinitionKeyException
+     * @throws InvalidDefinitionVersionException
+     * @throws InvalidStepKeyException
      */
     public function findFailed(): array
     {
@@ -144,9 +149,9 @@ final readonly class EloquentWorkflowRepository implements WorkflowRepository
     /**
      * @return list<WorkflowInstance>
      *
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionKeyException
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionVersionException
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidDefinitionKeyException
+     * @throws InvalidDefinitionVersionException
+     * @throws InvalidStepKeyException
      */
     public function findByDefinitionKey(string $definitionKey): array
     {
@@ -160,9 +165,9 @@ final readonly class EloquentWorkflowRepository implements WorkflowRepository
     /**
      * @throws WorkflowNotFoundException
      * @throws WorkflowLockedException
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionKeyException
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionVersionException
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidDefinitionKeyException
+     * @throws InvalidDefinitionVersionException
+     * @throws InvalidStepKeyException
      */
     public function findAndLockForUpdate(WorkflowId $workflowId, int $timeoutSeconds = 5): WorkflowInstance
     {
@@ -173,7 +178,7 @@ final readonly class EloquentWorkflowRepository implements WorkflowRepository
                 ->where('id', $workflowId->value)
                 ->lockForUpdate()
                 ->first();
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             if ($this->isLockTimeoutException($e)) {
                 throw WorkflowLockedException::lockTimeout($workflowId);
             }
@@ -185,7 +190,7 @@ final readonly class EloquentWorkflowRepository implements WorkflowRepository
             throw WorkflowNotFoundException::withId($workflowId);
         }
 
-        return $this->hydrator->toDomain($model);
+        return $this->workflowHydrator->toDomain($model);
     }
 
     public function acquireApplicationLock(WorkflowId $workflowId, string $lockId): bool
@@ -244,17 +249,13 @@ final readonly class EloquentWorkflowRepository implements WorkflowRepository
             ]);
     }
 
-    /**
-     * @deprecated Use acquireApplicationLock() instead
-     */
+    #[Deprecated(message: 'Use acquireApplicationLock() instead')]
     public function lockForUpdate(WorkflowId $workflowId, string $lockId): bool
     {
         return $this->acquireApplicationLock($workflowId, $lockId);
     }
 
-    /**
-     * @deprecated Use releaseApplicationLock() instead
-     */
+    #[Deprecated(message: 'Use releaseApplicationLock() instead')]
     public function releaseLock(WorkflowId $workflowId, string $lockId): bool
     {
         return $this->releaseApplicationLock($workflowId, $lockId);
@@ -269,16 +270,16 @@ final readonly class EloquentWorkflowRepository implements WorkflowRepository
      *
      * @throws WorkflowNotFoundException
      * @throws WorkflowLockedException
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionKeyException
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionVersionException
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidDefinitionKeyException
+     * @throws InvalidDefinitionVersionException
+     * @throws InvalidStepKeyException
      */
     public function withLockedWorkflow(WorkflowId $workflowId, callable $callback, int $timeoutSeconds = 5): mixed
     {
         return $this->connection->transaction(function () use ($workflowId, $callback, $timeoutSeconds) {
-            $workflow = $this->findAndLockForUpdate($workflowId, $timeoutSeconds);
+            $workflowInstance = $this->findAndLockForUpdate($workflowId, $timeoutSeconds);
 
-            return $callback($workflow);
+            return $callback($workflowInstance);
         });
     }
 
@@ -287,19 +288,19 @@ final readonly class EloquentWorkflowRepository implements WorkflowRepository
         $driver = $this->connection->getDriverName();
 
         match ($driver) {
-            'mysql' => $this->connection->statement("SET innodb_lock_wait_timeout = {$timeoutSeconds}"),
-            'pgsql' => $this->connection->statement("SET lock_timeout = '{$timeoutSeconds}s'"),
+            'mysql' => $this->connection->statement('SET innodb_lock_wait_timeout = '.$timeoutSeconds),
+            'pgsql' => $this->connection->statement(sprintf("SET lock_timeout = '%ds'", $timeoutSeconds)),
             default => null,
         };
     }
 
-    private function isLockTimeoutException(\Illuminate\Database\QueryException $e): bool
+    private function isLockTimeoutException(QueryException $queryException): bool
     {
         $driver = $this->connection->getDriverName();
 
         return match ($driver) {
-            'mysql' => str_contains($e->getMessage(), 'Lock wait timeout exceeded'),
-            'pgsql' => str_contains($e->getMessage(), 'lock timeout'),
+            'mysql' => str_contains($queryException->getMessage(), 'Lock wait timeout exceeded'),
+            'pgsql' => str_contains($queryException->getMessage(), 'lock timeout'),
             default => false,
         };
     }
@@ -307,14 +308,14 @@ final readonly class EloquentWorkflowRepository implements WorkflowRepository
     /**
      * @return list<WorkflowInstance>
      *
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionKeyException
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionVersionException
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidDefinitionKeyException
+     * @throws InvalidDefinitionVersionException
+     * @throws InvalidStepKeyException
      */
-    private function findAllByState(WorkflowState $state): array
+    private function findAllByState(WorkflowState $workflowState): array
     {
         $models = WorkflowModel::query()
-            ->where('state', $state->value)
+            ->where('state', $workflowState->value)
             ->get();
 
         return $this->hydrateModels($models->all());
@@ -325,15 +326,15 @@ final readonly class EloquentWorkflowRepository implements WorkflowRepository
      *
      * @return list<WorkflowInstance>
      *
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionKeyException
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionVersionException
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidDefinitionKeyException
+     * @throws InvalidDefinitionVersionException
+     * @throws InvalidStepKeyException
      */
     private function hydrateModels(array $models): array
     {
         $result = [];
         foreach ($models as $model) {
-            $result[] = $this->hydrator->toDomain($model);
+            $result[] = $this->workflowHydrator->toDomain($model);
         }
 
         return $result;

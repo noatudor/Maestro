@@ -112,7 +112,7 @@ describe('ZombieJobDetector', function (): void {
             $workflowId1 = WorkflowId::generate();
             $workflowId2 = WorkflowId::generate();
 
-            $job1 = JobRecord::create(
+            $jobRecord = JobRecord::create(
                 $workflowId1,
                 StepRunId::generate(),
                 'zombie-1',
@@ -129,11 +129,11 @@ describe('ZombieJobDetector', function (): void {
             );
 
             CarbonImmutable::setTestNow(CarbonImmutable::now()->subHours(2));
-            $job1->start('worker-1');
+            $jobRecord->start('worker-1');
             $job2->start('worker-2');
             CarbonImmutable::setTestNow();
 
-            $this->repository->save($job1);
+            $this->repository->save($jobRecord);
             $this->repository->save($job2);
 
             $result = $this->detector->detect(30);
@@ -145,7 +145,7 @@ describe('ZombieJobDetector', function (): void {
         it('deduplicates workflow ids for jobs in same workflow', function (): void {
             $workflowId = WorkflowId::generate();
 
-            $job1 = JobRecord::create(
+            $jobRecord = JobRecord::create(
                 $workflowId,
                 StepRunId::generate(),
                 'zombie-same-1',
@@ -162,11 +162,11 @@ describe('ZombieJobDetector', function (): void {
             );
 
             CarbonImmutable::setTestNow(CarbonImmutable::now()->subHours(2));
-            $job1->start('worker-1');
+            $jobRecord->start('worker-1');
             $job2->start('worker-2');
             CarbonImmutable::setTestNow();
 
-            $this->repository->save($job1);
+            $this->repository->save($jobRecord);
             $this->repository->save($job2);
 
             $result = $this->detector->detect(30);
@@ -247,14 +247,14 @@ describe('ZombieJobDetector', function (): void {
     });
 });
 
-describe('ZombieJobDetectionResult', function (): void {
+describe('ZombieJobDetectionResult', static function (): void {
     it('creates empty result', function (): void {
-        $result = ZombieJobDetectionResult::empty();
+        $zombieJobDetectionResult = ZombieJobDetectionResult::empty();
 
-        expect($result->detectedJobs)->toBeEmpty();
-        expect($result->affectedWorkflowIds)->toBeEmpty();
-        expect($result->markedFailedCount)->toBe(0);
-        expect($result->hasZombies())->toBeFalse();
+        expect($zombieJobDetectionResult->detectedJobs)->toBeEmpty();
+        expect($zombieJobDetectionResult->affectedWorkflowIds)->toBeEmpty();
+        expect($zombieJobDetectionResult->markedFailedCount)->toBe(0);
+        expect($zombieJobDetectionResult->hasZombies())->toBeFalse();
     });
 
     it('reports has zombies when count > 0', function (): void {

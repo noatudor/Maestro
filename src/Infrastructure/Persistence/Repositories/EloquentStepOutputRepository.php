@@ -17,7 +17,7 @@ use Ramsey\Uuid\Uuid;
 final readonly class EloquentStepOutputRepository implements StepOutputRepository
 {
     public function __construct(
-        private OutputSerializer $serializer,
+        private OutputSerializer $outputSerializer,
         private Connection $connection,
     ) {}
 
@@ -40,7 +40,7 @@ final readonly class EloquentStepOutputRepository implements StepOutputRepositor
         }
 
         try {
-            return $this->serializer->deserialize($model->payload, $outputClass);
+            return $this->outputSerializer->deserialize($model->payload, $outputClass);
         } catch (SerializationException) {
             return null;
         }
@@ -66,7 +66,7 @@ final readonly class EloquentStepOutputRepository implements StepOutputRepositor
         }
 
         try {
-            return $this->serializer->deserialize($model->payload, $outputClass);
+            return $this->outputSerializer->deserialize($model->payload, $outputClass);
         } catch (SerializationException) {
             return null;
         }
@@ -83,10 +83,10 @@ final readonly class EloquentStepOutputRepository implements StepOutputRepositor
             ->exists();
     }
 
-    public function save(WorkflowId $workflowId, StepOutput $output): void
+    public function save(WorkflowId $workflowId, StepOutput $stepOutput): void
     {
-        $outputClass = $output::class;
-        $stepKey = $output->stepKey();
+        $outputClass = $stepOutput::class;
+        $stepKey = $stepOutput->stepKey();
 
         StepOutputModel::query()->updateOrCreate(
             [
@@ -96,21 +96,21 @@ final readonly class EloquentStepOutputRepository implements StepOutputRepositor
             [
                 'id' => Uuid::uuid7()->toString(),
                 'step_key' => $stepKey->value,
-                'payload' => $this->serializer->serialize($output),
+                'payload' => $this->outputSerializer->serialize($stepOutput),
             ],
         );
     }
 
-    public function saveWithAtomicMerge(WorkflowId $workflowId, MergeableOutput $output): void
+    public function saveWithAtomicMerge(WorkflowId $workflowId, MergeableOutput $mergeableOutput): void
     {
-        $outputClass = $output::class;
+        $outputClass = $mergeableOutput::class;
 
-        $this->connection->transaction(function () use ($workflowId, $output, $outputClass): void {
+        $this->connection->transaction(function () use ($workflowId, $mergeableOutput, $outputClass): void {
             $existing = $this->findForUpdate($workflowId, $outputClass);
 
-            $finalOutput = $output;
+            $finalOutput = $mergeableOutput;
             if ($existing instanceof MergeableOutput) {
-                $finalOutput = $existing->mergeWith($output);
+                $finalOutput = $existing->mergeWith($mergeableOutput);
             }
 
             $this->save($workflowId, $finalOutput);
@@ -132,7 +132,7 @@ final readonly class EloquentStepOutputRepository implements StepOutputRepositor
             $outputClass = $model->output_class;
 
             try {
-                $outputs[] = $this->serializer->deserialize($model->payload, $outputClass);
+                $outputs[] = $this->outputSerializer->deserialize($model->payload, $outputClass);
             } catch (SerializationException) {
                 continue;
             }
@@ -175,7 +175,7 @@ final readonly class EloquentStepOutputRepository implements StepOutputRepositor
             $outputClass = $model->output_class;
 
             try {
-                $outputs[] = $this->serializer->deserialize($model->payload, $outputClass);
+                $outputs[] = $this->outputSerializer->deserialize($model->payload, $outputClass);
             } catch (SerializationException) {
                 continue;
             }

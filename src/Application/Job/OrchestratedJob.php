@@ -30,22 +30,6 @@ abstract class OrchestratedJob implements ShouldQueue
     use SerializesModels;
 
     /**
-     * The workflow instance this job belongs to.
-     */
-    public readonly WorkflowId $workflowId;
-
-    /**
-     * The step run this job is part of.
-     */
-    public readonly StepRunId $stepRunId;
-
-    /**
-     * Unique identifier for this specific job dispatch.
-     * Used for correlation in job ledger and idempotency checks.
-     */
-    public readonly string $jobUuid;
-
-    /**
      * Workflow context provider (injected during job execution).
      */
     protected ?WorkflowContextProvider $contextProvider = null;
@@ -56,14 +40,20 @@ abstract class OrchestratedJob implements ShouldQueue
     protected ?StepOutputStore $outputStore = null;
 
     public function __construct(
-        WorkflowId $workflowId,
-        StepRunId $stepRunId,
-        string $jobUuid,
-    ) {
-        $this->workflowId = $workflowId;
-        $this->stepRunId = $stepRunId;
-        $this->jobUuid = $jobUuid;
-    }
+        /**
+         * The workflow instance this job belongs to.
+         */
+        public readonly WorkflowId $workflowId,
+        /**
+         * The step run this job is part of.
+         */
+        public readonly StepRunId $stepRunId,
+        /**
+         * Unique identifier for this specific job dispatch.
+         * Used for correlation in job ledger and idempotency checks.
+         */
+        public readonly string $jobUuid,
+    ) {}
 
     /**
      * Laravel's job handler - do not override.
@@ -72,11 +62,11 @@ abstract class OrchestratedJob implements ShouldQueue
      * Lifecycle tracking is handled by middleware.
      */
     final public function handle(
-        WorkflowContextProvider $contextProvider,
-        StepOutputStore $outputStore,
+        WorkflowContextProvider $workflowContextProvider,
+        StepOutputStore $stepOutputStore,
     ): void {
-        $this->contextProvider = $contextProvider;
-        $this->outputStore = $outputStore;
+        $this->contextProvider = $workflowContextProvider;
+        $this->outputStore = $stepOutputStore;
 
         $this->execute();
     }
@@ -88,9 +78,9 @@ abstract class OrchestratedJob implements ShouldQueue
      *
      * @internal
      */
-    final public function setContextProvider(WorkflowContextProvider $provider): void
+    final public function setContextProvider(WorkflowContextProvider $workflowContextProvider): void
     {
-        $this->contextProvider = $provider;
+        $this->contextProvider = $workflowContextProvider;
     }
 
     /**
@@ -100,9 +90,9 @@ abstract class OrchestratedJob implements ShouldQueue
      *
      * @internal
      */
-    final public function setOutputStore(StepOutputStore $store): void
+    final public function setOutputStore(StepOutputStore $stepOutputStore): void
     {
-        $this->outputStore = $store;
+        $this->outputStore = $stepOutputStore;
     }
 
     /**
@@ -135,7 +125,7 @@ abstract class OrchestratedJob implements ShouldQueue
      */
     protected function context(): ?WorkflowContext
     {
-        if ($this->contextProvider === null) {
+        if (! $this->contextProvider instanceof WorkflowContextProvider) {
             return null;
         }
 
@@ -153,7 +143,7 @@ abstract class OrchestratedJob implements ShouldQueue
      */
     protected function contextAs(string $contextClass): ?WorkflowContext
     {
-        if ($this->contextProvider === null) {
+        if (! $this->contextProvider instanceof WorkflowContextProvider) {
             return null;
         }
 

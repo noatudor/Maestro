@@ -49,47 +49,47 @@ final class JobRecordCollection extends AbstractCollection
 
     public function dispatched(): self
     {
-        return $this->filter(fn (JobRecord $job): bool => $job->isDispatched());
+        return $this->filter(static fn (JobRecord $jobRecord): bool => $jobRecord->isDispatched());
     }
 
     public function running(): self
     {
-        return $this->filter(fn (JobRecord $job): bool => $job->isRunning());
+        return $this->filter(static fn (JobRecord $jobRecord): bool => $jobRecord->isRunning());
     }
 
     public function succeeded(): self
     {
-        return $this->filter(fn (JobRecord $job): bool => $job->isSucceeded());
+        return $this->filter(static fn (JobRecord $jobRecord): bool => $jobRecord->isSucceeded());
     }
 
     public function failed(): self
     {
-        return $this->filter(fn (JobRecord $job): bool => $job->isFailed());
+        return $this->filter(static fn (JobRecord $jobRecord): bool => $jobRecord->isFailed());
     }
 
     public function terminal(): self
     {
-        return $this->filter(fn (JobRecord $job): bool => $job->isTerminal());
+        return $this->filter(static fn (JobRecord $jobRecord): bool => $jobRecord->isTerminal());
     }
 
-    public function byState(JobState $state): self
+    public function byState(JobState $jobState): self
     {
-        return $this->filter(fn (JobRecord $job): bool => $job->status() === $state);
+        return $this->filter(static fn (JobRecord $jobRecord): bool => $jobRecord->status() === $jobState);
     }
 
     public function forStepRun(StepRunId $stepRunId): self
     {
-        return $this->filter(fn (JobRecord $job): bool => $job->stepRunId->equals($stepRunId));
+        return $this->filter(static fn (JobRecord $jobRecord): bool => $jobRecord->stepRunId->equals($stepRunId));
     }
 
     public function findByJobUuid(string $jobUuid): ?JobRecord
     {
-        return $this->first(fn (JobRecord $job): bool => $job->jobUuid === $jobUuid);
+        return $this->first(static fn (JobRecord $jobRecord): bool => $jobRecord->jobUuid === $jobUuid);
     }
 
     public function findByQueue(string $queue): self
     {
-        return $this->filter(fn (JobRecord $job): bool => $job->queue === $queue);
+        return $this->filter(static fn (JobRecord $jobRecord): bool => $jobRecord->queue === $queue);
     }
 
     public function succeededCount(): int
@@ -114,32 +114,32 @@ final class JobRecordCollection extends AbstractCollection
 
     public function totalRuntimeMs(): int
     {
-        return (int) $this->sum(fn (JobRecord $job): int => $job->runtimeMs() ?? 0);
+        return (int) $this->sum(static fn (JobRecord $jobRecord): int => $jobRecord->runtimeMs() ?? 0);
     }
 
     public function averageRuntimeMs(): float
     {
-        $completedJobs = $this->terminal();
-        if ($completedJobs->isEmpty()) {
+        $jobRecordCollection = $this->terminal();
+        if ($jobRecordCollection->isEmpty()) {
             return 0.0;
         }
 
-        return $completedJobs->totalRuntimeMs() / $completedJobs->count();
+        return $jobRecordCollection->totalRuntimeMs() / $jobRecordCollection->count();
     }
 
     public function hasAnyFailed(): bool
     {
-        return $this->any(fn (JobRecord $job): bool => $job->isFailed());
+        return $this->any(static fn (JobRecord $jobRecord): bool => $jobRecord->isFailed());
     }
 
     public function areAllSucceeded(): bool
     {
-        return $this->isNotEmpty() && $this->every(fn (JobRecord $job): bool => $job->isSucceeded());
+        return $this->isNotEmpty() && $this->every(static fn (JobRecord $jobRecord): bool => $jobRecord->isSucceeded());
     }
 
     public function areAllTerminal(): bool
     {
-        return $this->isNotEmpty() && $this->every(fn (JobRecord $job): bool => $job->isTerminal());
+        return $this->isNotEmpty() && $this->every(static fn (JobRecord $jobRecord): bool => $jobRecord->isTerminal());
     }
 
     public function areAllCompleted(): bool
@@ -153,8 +153,8 @@ final class JobRecordCollection extends AbstractCollection
     public function countByQueue(): array
     {
         $counts = [];
-        foreach ($this->items as $job) {
-            $queue = $job->queue;
+        foreach ($this->items as $item) {
+            $queue = $item->queue;
             $counts[$queue] = ($counts[$queue] ?? 0) + 1;
         }
 
@@ -167,8 +167,8 @@ final class JobRecordCollection extends AbstractCollection
     public function countByStatus(): array
     {
         $counts = [];
-        foreach ($this->items as $job) {
-            $status = $job->status()->value;
+        foreach ($this->items as $item) {
+            $status = $item->status()->value;
             $counts[$status] = ($counts[$status] ?? 0) + 1;
         }
 

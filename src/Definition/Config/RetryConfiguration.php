@@ -24,14 +24,14 @@ final readonly class RetryConfiguration
         int $delaySeconds = 0,
         float $backoffMultiplier = 1.0,
         int $maxDelaySeconds = 3600,
-        RetryScope $scope = RetryScope::All,
+        RetryScope $retryScope = RetryScope::All,
     ): self {
         return new self(
             max(1, $maxAttempts),
             max(0, $delaySeconds),
             max(1.0, $backoffMultiplier),
             max(0, $maxDelaySeconds),
-            $scope,
+            $retryScope,
         );
     }
 
@@ -109,14 +109,14 @@ final readonly class RetryConfiguration
         );
     }
 
-    public function withScope(RetryScope $scope): self
+    public function withScope(RetryScope $retryScope): self
     {
         return new self(
             $this->maxAttempts,
             $this->delaySeconds,
             $this->backoffMultiplier,
             $this->maxDelaySeconds,
-            $scope,
+            $retryScope,
         );
     }
 

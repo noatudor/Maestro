@@ -33,7 +33,7 @@ final class InMemoryJobLedgerRepository implements JobLedgerRepository
     {
         $job = $this->find($jobId);
 
-        if ($job === null) {
+        if (! $job instanceof JobRecord) {
             throw JobNotFoundException::withId($jobId);
         }
 
@@ -49,7 +49,7 @@ final class InMemoryJobLedgerRepository implements JobLedgerRepository
     {
         $jobs = array_filter(
             $this->jobs,
-            static fn (JobRecord $job) => $job->stepRunId->value === $stepRunId->value,
+            static fn (JobRecord $jobRecord): bool => $jobRecord->stepRunId->value === $stepRunId->value,
         );
 
         return new JobRecordCollection(array_values($jobs));
@@ -59,18 +59,18 @@ final class InMemoryJobLedgerRepository implements JobLedgerRepository
     {
         $jobs = array_filter(
             $this->jobs,
-            static fn (JobRecord $job) => $job->workflowId->value === $workflowId->value,
+            static fn (JobRecord $jobRecord): bool => $jobRecord->workflowId->value === $workflowId->value,
         );
 
         return new JobRecordCollection(array_values($jobs));
     }
 
-    public function findByStepRunIdAndState(StepRunId $stepRunId, JobState $state): JobRecordCollection
+    public function findByStepRunIdAndState(StepRunId $stepRunId, JobState $jobState): JobRecordCollection
     {
         $jobs = array_filter(
             $this->jobs,
-            static fn (JobRecord $job) => $job->stepRunId->value === $stepRunId->value
-                && $job->status() === $state,
+            static fn (JobRecord $jobRecord): bool => $jobRecord->stepRunId->value === $stepRunId->value
+                && $jobRecord->status() === $jobState,
         );
 
         return new JobRecordCollection(array_values($jobs));
@@ -81,9 +81,9 @@ final class InMemoryJobLedgerRepository implements JobLedgerRepository
         return $this->findByStepRunId($stepRunId)->count();
     }
 
-    public function countByStepRunIdAndState(StepRunId $stepRunId, JobState $state): int
+    public function countByStepRunIdAndState(StepRunId $stepRunId, JobState $jobState): int
     {
-        return $this->findByStepRunIdAndState($stepRunId, $state)->count();
+        return $this->findByStepRunIdAndState($stepRunId, $jobState)->count();
     }
 
     public function findByJobUuid(string $jobUuid): ?JobRecord
@@ -114,9 +114,9 @@ final class InMemoryJobLedgerRepository implements JobLedgerRepository
     {
         $jobs = array_filter(
             $this->jobs,
-            static fn (JobRecord $job) => $job->status() === JobState::Running
-                && $job->startedAt() !== null
-                && $job->startedAt()->lessThan($threshold),
+            static fn (JobRecord $jobRecord): bool => $jobRecord->status() === JobState::Running
+                && $jobRecord->startedAt() instanceof CarbonImmutable
+                && $jobRecord->startedAt()->lessThan($threshold),
         );
 
         return new JobRecordCollection(array_values($jobs));
@@ -126,8 +126,8 @@ final class InMemoryJobLedgerRepository implements JobLedgerRepository
     {
         $jobs = array_filter(
             $this->jobs,
-            static fn (JobRecord $job) => $job->status() === JobState::Dispatched
-                && $job->dispatchedAt->lessThan($threshold),
+            static fn (JobRecord $jobRecord): bool => $jobRecord->status() === JobState::Dispatched
+                && $jobRecord->dispatchedAt->lessThan($threshold),
         );
 
         return new JobRecordCollection(array_values($jobs));

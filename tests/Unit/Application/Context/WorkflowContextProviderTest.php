@@ -21,26 +21,25 @@ describe('WorkflowContextProvider', function (): void {
 
     describe('get', function (): void {
         it('returns null when no context loader is configured', function (): void {
-            $definition = WorkflowDefinition::create(
+            $workflowDefinition = WorkflowDefinition::create(
+                displayName: 'Test Workflow',
                 key: DefinitionKey::fromString('test-workflow'),
                 version: DefinitionVersion::fromString('1.0.0'),
-                displayName: 'Test Workflow',
                 steps: StepCollection::empty(),
-                contextLoaderClass: null,
             );
 
-            $provider = new WorkflowContextProvider($this->workflowId, $definition, $this->container);
+            $provider = new WorkflowContextProvider($this->workflowId, $workflowDefinition, $this->container);
 
             expect($provider->get())->toBeNull();
         });
 
         it('loads context via context loader', function (): void {
-            $definition = WorkflowDefinition::create(
+            $workflowDefinition = WorkflowDefinition::create(
+                displayName: 'Test Workflow',
+                contextLoaderClass: TestContextLoader::class,
                 key: DefinitionKey::fromString('test-workflow'),
                 version: DefinitionVersion::fromString('1.0.0'),
-                displayName: 'Test Workflow',
                 steps: StepCollection::empty(),
-                contextLoaderClass: TestContextLoader::class,
             );
 
             $loader = new TestContextLoader();
@@ -49,7 +48,7 @@ describe('WorkflowContextProvider', function (): void {
                 ->with(TestContextLoader::class)
                 ->andReturn($loader);
 
-            $provider = new WorkflowContextProvider($this->workflowId, $definition, $this->container);
+            $provider = new WorkflowContextProvider($this->workflowId, $workflowDefinition, $this->container);
 
             $context = $provider->get();
 
@@ -57,12 +56,12 @@ describe('WorkflowContextProvider', function (): void {
         });
 
         it('caches the context after first load', function (): void {
-            $definition = WorkflowDefinition::create(
+            $workflowDefinition = WorkflowDefinition::create(
+                displayName: 'Test Workflow',
+                contextLoaderClass: TestContextLoader::class,
                 key: DefinitionKey::fromString('test-workflow'),
                 version: DefinitionVersion::fromString('1.0.0'),
-                displayName: 'Test Workflow',
                 steps: StepCollection::empty(),
-                contextLoaderClass: TestContextLoader::class,
             );
 
             $loader = new TestContextLoader();
@@ -71,7 +70,7 @@ describe('WorkflowContextProvider', function (): void {
                 ->with(TestContextLoader::class)
                 ->andReturn($loader);
 
-            $provider = new WorkflowContextProvider($this->workflowId, $definition, $this->container);
+            $provider = new WorkflowContextProvider($this->workflowId, $workflowDefinition, $this->container);
 
             $context1 = $provider->get();
             $context2 = $provider->get();
@@ -82,12 +81,12 @@ describe('WorkflowContextProvider', function (): void {
 
     describe('getTyped', function (): void {
         it('returns typed context when type matches', function (): void {
-            $definition = WorkflowDefinition::create(
+            $workflowDefinition = WorkflowDefinition::create(
+                displayName: 'Test Workflow',
+                contextLoaderClass: TestContextLoader::class,
                 key: DefinitionKey::fromString('test-workflow'),
                 version: DefinitionVersion::fromString('1.0.0'),
-                displayName: 'Test Workflow',
                 steps: StepCollection::empty(),
-                contextLoaderClass: TestContextLoader::class,
             );
 
             $this->container->shouldReceive('make')
@@ -95,7 +94,7 @@ describe('WorkflowContextProvider', function (): void {
                 ->with(TestContextLoader::class)
                 ->andReturn(new TestContextLoader());
 
-            $provider = new WorkflowContextProvider($this->workflowId, $definition, $this->container);
+            $provider = new WorkflowContextProvider($this->workflowId, $workflowDefinition, $this->container);
 
             $context = $provider->getTyped(TestWorkflowContext::class);
 
@@ -103,12 +102,12 @@ describe('WorkflowContextProvider', function (): void {
         });
 
         it('returns null when type does not match', function (): void {
-            $definition = WorkflowDefinition::create(
+            $workflowDefinition = WorkflowDefinition::create(
+                displayName: 'Test Workflow',
+                contextLoaderClass: TestContextLoader::class,
                 key: DefinitionKey::fromString('test-workflow'),
                 version: DefinitionVersion::fromString('1.0.0'),
-                displayName: 'Test Workflow',
                 steps: StepCollection::empty(),
-                contextLoaderClass: TestContextLoader::class,
             );
 
             $this->container->shouldReceive('make')
@@ -116,7 +115,7 @@ describe('WorkflowContextProvider', function (): void {
                 ->with(TestContextLoader::class)
                 ->andReturn(new TestContextLoader());
 
-            $provider = new WorkflowContextProvider($this->workflowId, $definition, $this->container);
+            $provider = new WorkflowContextProvider($this->workflowId, $workflowDefinition, $this->container);
 
             $context = $provider->getTyped(ContextLoader::class);
 
@@ -124,15 +123,14 @@ describe('WorkflowContextProvider', function (): void {
         });
 
         it('returns null when no context loader configured', function (): void {
-            $definition = WorkflowDefinition::create(
+            $workflowDefinition = WorkflowDefinition::create(
+                displayName: 'Test Workflow',
                 key: DefinitionKey::fromString('test-workflow'),
                 version: DefinitionVersion::fromString('1.0.0'),
-                displayName: 'Test Workflow',
                 steps: StepCollection::empty(),
-                contextLoaderClass: null,
             );
 
-            $provider = new WorkflowContextProvider($this->workflowId, $definition, $this->container);
+            $provider = new WorkflowContextProvider($this->workflowId, $workflowDefinition, $this->container);
 
             expect($provider->getTyped(TestWorkflowContext::class))->toBeNull();
         });
@@ -140,29 +138,28 @@ describe('WorkflowContextProvider', function (): void {
 
     describe('hasContextLoader', function (): void {
         it('returns true when context loader is configured', function (): void {
-            $definition = WorkflowDefinition::create(
+            $workflowDefinition = WorkflowDefinition::create(
+                displayName: 'Test Workflow',
+                contextLoaderClass: TestContextLoader::class,
                 key: DefinitionKey::fromString('test-workflow'),
                 version: DefinitionVersion::fromString('1.0.0'),
-                displayName: 'Test Workflow',
                 steps: StepCollection::empty(),
-                contextLoaderClass: TestContextLoader::class,
             );
 
-            $provider = new WorkflowContextProvider($this->workflowId, $definition, $this->container);
+            $provider = new WorkflowContextProvider($this->workflowId, $workflowDefinition, $this->container);
 
             expect($provider->hasContextLoader())->toBeTrue();
         });
 
         it('returns false when no context loader is configured', function (): void {
-            $definition = WorkflowDefinition::create(
+            $workflowDefinition = WorkflowDefinition::create(
+                displayName: 'Test Workflow',
                 key: DefinitionKey::fromString('test-workflow'),
                 version: DefinitionVersion::fromString('1.0.0'),
-                displayName: 'Test Workflow',
                 steps: StepCollection::empty(),
-                contextLoaderClass: null,
             );
 
-            $provider = new WorkflowContextProvider($this->workflowId, $definition, $this->container);
+            $provider = new WorkflowContextProvider($this->workflowId, $workflowDefinition, $this->container);
 
             expect($provider->hasContextLoader())->toBeFalse();
         });
@@ -170,12 +167,12 @@ describe('WorkflowContextProvider', function (): void {
 
     describe('clearCache', function (): void {
         it('clears the cached context', function (): void {
-            $definition = WorkflowDefinition::create(
+            $workflowDefinition = WorkflowDefinition::create(
+                displayName: 'Test Workflow',
+                contextLoaderClass: TestContextLoader::class,
                 key: DefinitionKey::fromString('test-workflow'),
                 version: DefinitionVersion::fromString('1.0.0'),
-                displayName: 'Test Workflow',
                 steps: StepCollection::empty(),
-                contextLoaderClass: TestContextLoader::class,
             );
 
             $this->container->shouldReceive('make')
@@ -183,7 +180,7 @@ describe('WorkflowContextProvider', function (): void {
                 ->with(TestContextLoader::class)
                 ->andReturn(new TestContextLoader());
 
-            $provider = new WorkflowContextProvider($this->workflowId, $definition, $this->container);
+            $provider = new WorkflowContextProvider($this->workflowId, $workflowDefinition, $this->container);
 
             $context1 = $provider->get();
             $provider->clearCache();
@@ -195,15 +192,14 @@ describe('WorkflowContextProvider', function (): void {
 
     describe('workflowId', function (): void {
         it('returns the workflow id', function (): void {
-            $definition = WorkflowDefinition::create(
+            $workflowDefinition = WorkflowDefinition::create(
+                displayName: 'Test Workflow',
                 key: DefinitionKey::fromString('test-workflow'),
                 version: DefinitionVersion::fromString('1.0.0'),
-                displayName: 'Test Workflow',
                 steps: StepCollection::empty(),
-                contextLoaderClass: null,
             );
 
-            $provider = new WorkflowContextProvider($this->workflowId, $definition, $this->container);
+            $provider = new WorkflowContextProvider($this->workflowId, $workflowDefinition, $this->container);
 
             expect($provider->workflowId()->equals($this->workflowId))->toBeTrue();
         });

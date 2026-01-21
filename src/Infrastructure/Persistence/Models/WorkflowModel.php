@@ -8,7 +8,9 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Query\Builder;
 use Maestro\Workflow\Infrastructure\Persistence\QueryBuilders\WorkflowQueryBuilder;
+use Override;
 
 /**
  * @property string $id
@@ -57,8 +59,9 @@ final class WorkflowModel extends Model
     ];
 
     /**
-     * @param \Illuminate\Database\Query\Builder $query
+     * @param Builder $query
      */
+    #[Override]
     public function newEloquentBuilder($query): WorkflowQueryBuilder
     {
         return new WorkflowQueryBuilder($query);

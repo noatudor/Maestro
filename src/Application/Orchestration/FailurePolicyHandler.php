@@ -38,50 +38,50 @@ final readonly class FailurePolicyHandler
      * @throws DefinitionNotFoundException
      */
     public function handle(
-        WorkflowInstance $workflow,
+        WorkflowInstance $workflowInstance,
         StepRun $stepRun,
         StepDefinition $stepDefinition,
     ): void {
-        $policy = $stepDefinition->failurePolicy();
-        $retryConfig = $stepDefinition->retryConfiguration();
+        $failurePolicy = $stepDefinition->failurePolicy();
+        $retryConfiguration = $stepDefinition->retryConfiguration();
 
-        if ($policy === FailurePolicy::RetryStep) {
-            if (! $retryConfig->hasReachedMaxAttempts($stepRun->attempt)) {
-                $this->retryStep($workflow, $stepDefinition);
+        if ($failurePolicy === FailurePolicy::RetryStep) {
+            if (! $retryConfiguration->hasReachedMaxAttempts($stepRun->attempt)) {
+                $this->retryStep($workflowInstance, $stepDefinition);
 
                 return;
             }
 
-            $this->failWorkflow($workflow, $stepRun);
+            $this->failWorkflow($workflowInstance, $stepRun);
 
             return;
         }
 
-        match ($policy) {
-            FailurePolicy::FailWorkflow => $this->failWorkflow($workflow, $stepRun),
-            FailurePolicy::PauseWorkflow => $this->pauseWorkflow($workflow, $stepRun),
-            FailurePolicy::SkipStep => $this->skipStep($workflow),
-            FailurePolicy::ContinueWithPartial => $this->continueWithPartial($workflow),
+        match ($failurePolicy) {
+            FailurePolicy::FailWorkflow => $this->failWorkflow($workflowInstance, $stepRun),
+            FailurePolicy::PauseWorkflow => $this->pauseWorkflow($workflowInstance, $stepRun),
+            FailurePolicy::SkipStep => $this->skipStep($workflowInstance),
+            FailurePolicy::ContinueWithPartial => $this->continueWithPartial($workflowInstance),
         };
     }
 
     /**
      * @throws InvalidStateTransitionException
      */
-    private function failWorkflow(WorkflowInstance $workflow, StepRun $stepRun): void
+    private function failWorkflow(WorkflowInstance $workflowInstance, StepRun $stepRun): void
     {
-        $workflow->fail(
+        $workflowInstance->fail(
             $stepRun->failureCode(),
             $stepRun->failureMessage(),
         );
 
-        $this->workflowRepository->save($workflow);
+        $this->workflowRepository->save($workflowInstance);
     }
 
     /**
      * @throws InvalidStateTransitionException
      */
-    private function pauseWorkflow(WorkflowInstance $workflow, StepRun $stepRun): void
+    private function pauseWorkflow(WorkflowInstance $workflowInstance, StepRun $stepRun): void
     {
         $reason = sprintf(
             'Step "%s" failed: %s',
@@ -89,8 +89,8 @@ final readonly class FailurePolicyHandler
             $stepRun->failureMessage() ?? 'Unknown error',
         );
 
-        $workflow->pause($reason);
-        $this->workflowRepository->save($workflow);
+        $workflowInstance->pause($reason);
+        $this->workflowRepository->save($workflowInstance);
     }
 
     /**
@@ -98,18 +98,18 @@ final readonly class FailurePolicyHandler
      * @throws InvalidStateTransitionException
      * @throws DefinitionNotFoundException
      */
-    private function retryStep(WorkflowInstance $workflow, StepDefinition $stepDefinition): void
+    private function retryStep(WorkflowInstance $workflowInstance, StepDefinition $stepDefinition): void
     {
-        $this->stepDispatcher->retryStep($workflow, $stepDefinition);
+        $this->stepDispatcher->retryStep($workflowInstance, $stepDefinition);
     }
 
-    private function skipStep(WorkflowInstance $workflow): void
+    private function skipStep(WorkflowInstance $workflowInstance): void
     {
-        $this->workflowRepository->save($workflow);
+        $this->workflowRepository->save($workflowInstance);
     }
 
-    private function continueWithPartial(WorkflowInstance $workflow): void
+    private function continueWithPartial(WorkflowInstance $workflowInstance): void
     {
-        $this->workflowRepository->save($workflow);
+        $this->workflowRepository->save($workflowInstance);
     }
 }

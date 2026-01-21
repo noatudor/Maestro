@@ -34,24 +34,24 @@ describe('StepFinalizer atomic finalization', function (): void {
             stepKey: $stepKey,
             attempt: 1,
         );
-        $stepRun->start(1);
+        $stepRun->start();
         $this->stepRunRepository->save($stepRun);
 
-        $job = JobRecord::create(
+        $jobRecord = JobRecord::create(
             workflowId: $workflowId,
             stepRunId: $stepRun->id,
             jobUuid: 'job-uuid-1',
             jobClass: 'TestJob',
             queue: 'default',
         );
-        $job->start('worker-1');
-        $job->succeed();
-        $this->jobLedgerRepository->save($job);
+        $jobRecord->start('worker-1');
+        $jobRecord->succeed();
+        $this->jobLedgerRepository->save($jobRecord);
 
-        $stepDefinition = Mockery::mock(StepDefinition::class);
-        $stepDefinition->shouldReceive('key')->andReturn($stepKey);
+        $mock = Mockery::mock(StepDefinition::class);
+        $mock->shouldReceive('key')->andReturn($stepKey);
 
-        $result = $this->finalizer->tryFinalize($stepRun, $stepDefinition);
+        $result = $this->finalizer->tryFinalize($stepRun, $mock);
 
         expect($result->isFinalized())->toBeTrue();
         expect($result->wonRace())->toBeTrue();
@@ -67,24 +67,24 @@ describe('StepFinalizer atomic finalization', function (): void {
             stepKey: $stepKey,
             attempt: 1,
         );
-        $stepRun->start(1);
+        $stepRun->start();
         $this->stepRunRepository->save($stepRun);
 
-        $job = JobRecord::create(
+        $jobRecord = JobRecord::create(
             workflowId: $workflowId,
             stepRunId: $stepRun->id,
             jobUuid: 'job-uuid-1',
             jobClass: 'TestJob',
             queue: 'default',
         );
-        $job->start('worker-1');
-        $job->fail('error', 'Test error');
-        $this->jobLedgerRepository->save($job);
+        $jobRecord->start('worker-1');
+        $jobRecord->fail('error', 'Test error');
+        $this->jobLedgerRepository->save($jobRecord);
 
-        $stepDefinition = Mockery::mock(StepDefinition::class);
-        $stepDefinition->shouldReceive('key')->andReturn($stepKey);
+        $mock = Mockery::mock(StepDefinition::class);
+        $mock->shouldReceive('key')->andReturn($stepKey);
 
-        $result = $this->finalizer->tryFinalize($stepRun, $stepDefinition);
+        $result = $this->finalizer->tryFinalize($stepRun, $mock);
 
         expect($result->isFinalized())->toBeTrue();
         expect($result->wonRace())->toBeTrue();
@@ -100,19 +100,19 @@ describe('StepFinalizer atomic finalization', function (): void {
             stepKey: $stepKey,
             attempt: 1,
         );
-        $stepRun->start(1);
+        $stepRun->start();
         $this->stepRunRepository->save($stepRun);
 
-        $job = JobRecord::create(
+        $jobRecord = JobRecord::create(
             workflowId: $workflowId,
             stepRunId: $stepRun->id,
             jobUuid: 'job-uuid-1',
             jobClass: 'TestJob',
             queue: 'default',
         );
-        $job->start('worker-1');
-        $job->succeed();
-        $this->jobLedgerRepository->save($job);
+        $jobRecord->start('worker-1');
+        $jobRecord->succeed();
+        $this->jobLedgerRepository->save($jobRecord);
 
         $repository = new class($stepRun) extends InMemoryStepRunRepository
         {
@@ -129,13 +129,13 @@ describe('StepFinalizer atomic finalization', function (): void {
 
         $finalizer = new StepFinalizer($repository, $this->jobLedgerRepository);
 
-        $stepDefinition = Mockery::mock(StepDefinition::class);
-        $stepDefinition->shouldReceive('key')->andReturn($stepKey);
+        $mock = Mockery::mock(StepDefinition::class);
+        $mock->shouldReceive('key')->andReturn($stepKey);
 
-        $result = $finalizer->tryFinalize($stepRun, $stepDefinition);
+        $stepFinalizationResult = $finalizer->tryFinalize($stepRun, $mock);
 
-        expect($result->isFinalized())->toBeTrue();
-        expect($result->wonRace())->toBeFalse();
+        expect($stepFinalizationResult->isFinalized())->toBeTrue();
+        expect($stepFinalizationResult->wonRace())->toBeFalse();
     });
 
     it('returns notReady when step is not running', function (): void {
@@ -149,9 +149,9 @@ describe('StepFinalizer atomic finalization', function (): void {
         );
         $this->stepRunRepository->save($stepRun);
 
-        $stepDefinition = Mockery::mock(StepDefinition::class);
+        $mock = Mockery::mock(StepDefinition::class);
 
-        $result = $this->finalizer->tryFinalize($stepRun, $stepDefinition);
+        $result = $this->finalizer->tryFinalize($stepRun, $mock);
 
         expect($result->isFinalized())->toBeFalse();
         expect($result->wonRace())->toBeFalse();
@@ -166,19 +166,19 @@ describe('StepFinalizer atomic finalization', function (): void {
             stepKey: $stepKey,
             attempt: 1,
         );
-        $stepRun->start(2);
+        $stepRun->start();
         $this->stepRunRepository->save($stepRun);
 
-        $job1 = JobRecord::create(
+        $jobRecord = JobRecord::create(
             workflowId: $workflowId,
             stepRunId: $stepRun->id,
             jobUuid: 'job-uuid-1',
             jobClass: 'TestJob',
             queue: 'default',
         );
-        $job1->start('worker-1');
-        $job1->succeed();
-        $this->jobLedgerRepository->save($job1);
+        $jobRecord->start('worker-1');
+        $jobRecord->succeed();
+        $this->jobLedgerRepository->save($jobRecord);
 
         $job2 = JobRecord::create(
             workflowId: $workflowId,
@@ -190,9 +190,9 @@ describe('StepFinalizer atomic finalization', function (): void {
         $job2->start('worker-2');
         $this->jobLedgerRepository->save($job2);
 
-        $stepDefinition = Mockery::mock(StepDefinition::class);
+        $mock = Mockery::mock(StepDefinition::class);
 
-        $result = $this->finalizer->tryFinalize($stepRun, $stepDefinition);
+        $result = $this->finalizer->tryFinalize($stepRun, $mock);
 
         expect($result->isFinalized())->toBeFalse();
         expect($result->wonRace())->toBeFalse();

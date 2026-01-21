@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Maestro\Workflow\Tests\Fakes;
 
 use Carbon\CarbonImmutable;
+use Deprecated;
 use Maestro\Workflow\Contracts\WorkflowRepository;
 use Maestro\Workflow\Domain\WorkflowInstance;
 use Maestro\Workflow\Enums\WorkflowState;
@@ -32,16 +33,16 @@ final class InMemoryWorkflowRepository implements WorkflowRepository
     {
         $workflow = $this->find($workflowId);
 
-        if ($workflow === null) {
+        if (! $workflow instanceof WorkflowInstance) {
             throw WorkflowNotFoundException::withId($workflowId);
         }
 
         return $workflow;
     }
 
-    public function save(WorkflowInstance $workflow): void
+    public function save(WorkflowInstance $workflowInstance): void
     {
-        $this->workflows[$workflow->id->value] = $workflow;
+        $this->workflows[$workflowInstance->id->value] = $workflowInstance;
     }
 
     public function delete(WorkflowId $workflowId): void
@@ -61,7 +62,7 @@ final class InMemoryWorkflowRepository implements WorkflowRepository
     {
         return array_filter(
             $this->workflows,
-            static fn (WorkflowInstance $workflow): bool => $workflow->state() === $workflowState,
+            static fn (WorkflowInstance $workflowInstance): bool => $workflowInstance->state() === $workflowState,
         );
     }
 
@@ -96,7 +97,7 @@ final class InMemoryWorkflowRepository implements WorkflowRepository
     {
         return array_values(array_filter(
             $this->workflows,
-            static fn (WorkflowInstance $workflow): bool => $workflow->definitionKey->toString() === $definitionKey,
+            static fn (WorkflowInstance $workflowInstance): bool => $workflowInstance->definitionKey->toString() === $definitionKey,
         ));
     }
 
@@ -108,7 +109,7 @@ final class InMemoryWorkflowRepository implements WorkflowRepository
     {
         $workflow = $this->find($workflowId);
 
-        if ($workflow === null) {
+        if (! $workflow instanceof WorkflowInstance) {
             throw WorkflowNotFoundException::withId($workflowId);
         }
 
@@ -125,7 +126,7 @@ final class InMemoryWorkflowRepository implements WorkflowRepository
     {
         $workflow = $this->find($workflowId);
 
-        if ($workflow === null) {
+        if (! $workflow instanceof WorkflowInstance) {
             return false;
         }
 
@@ -143,7 +144,7 @@ final class InMemoryWorkflowRepository implements WorkflowRepository
     {
         $workflow = $this->find($workflowId);
 
-        if ($workflow === null) {
+        if (! $workflow instanceof WorkflowInstance) {
             return false;
         }
 
@@ -160,12 +161,12 @@ final class InMemoryWorkflowRepository implements WorkflowRepository
     {
         $workflow = $this->find($workflowId);
 
-        if ($workflow === null || ! $workflow->isLocked()) {
+        if (! $workflow instanceof WorkflowInstance || ! $workflow->isLocked()) {
             return false;
         }
 
         $lockedAt = $workflow->lockedAt();
-        if ($lockedAt === null) {
+        if (! $lockedAt instanceof CarbonImmutable) {
             return false;
         }
 
@@ -191,17 +192,13 @@ final class InMemoryWorkflowRepository implements WorkflowRepository
         return $count;
     }
 
-    /**
-     * @deprecated Use acquireApplicationLock() instead
-     */
+    #[Deprecated(message: 'Use acquireApplicationLock() instead')]
     public function lockForUpdate(WorkflowId $workflowId, string $lockId): bool
     {
         return $this->acquireApplicationLock($workflowId, $lockId);
     }
 
-    /**
-     * @deprecated Use releaseApplicationLock() instead
-     */
+    #[Deprecated(message: 'Use releaseApplicationLock() instead')]
     public function releaseLock(WorkflowId $workflowId, string $lockId): bool
     {
         return $this->releaseApplicationLock($workflowId, $lockId);
@@ -227,10 +224,10 @@ final class InMemoryWorkflowRepository implements WorkflowRepository
      */
     public function withLockedWorkflow(WorkflowId $workflowId, callable $callback, int $timeoutSeconds = 5): mixed
     {
-        $workflow = $this->findAndLockForUpdate($workflowId, $timeoutSeconds);
+        $workflowInstance = $this->findAndLockForUpdate($workflowId, $timeoutSeconds);
 
         try {
-            return $callback($workflow);
+            return $callback($workflowInstance);
         } finally {
             $this->releaseRowLock($workflowId);
         }

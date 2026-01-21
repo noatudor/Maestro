@@ -13,29 +13,29 @@ final readonly class TriggerResult
 {
     private function __construct(
         private bool $success,
-        private WorkflowInstance $workflow,
+        private WorkflowInstance $workflowInstance,
         private ?string $triggerType,
         private ?string $failureReason,
     ) {}
 
-    public static function success(WorkflowInstance $workflow, string $triggerType): self
+    public static function success(WorkflowInstance $workflowInstance, string $triggerType): self
     {
-        return new self(true, $workflow, $triggerType, null);
+        return new self(true, $workflowInstance, $triggerType, null);
     }
 
-    public static function workflowTerminal(WorkflowInstance $workflow): self
+    public static function workflowTerminal(WorkflowInstance $workflowInstance): self
     {
         return new self(
             false,
-            $workflow,
+            $workflowInstance,
             null,
-            sprintf('Workflow is in terminal state: %s', $workflow->state()->value),
+            sprintf('Workflow is in terminal state: %s', $workflowInstance->state()->value),
         );
     }
 
-    public static function transitionFailed(WorkflowInstance $workflow, string $reason): self
+    public static function transitionFailed(WorkflowInstance $workflowInstance, string $reason): self
     {
-        return new self(false, $workflow, null, $reason);
+        return new self(false, $workflowInstance, null, $reason);
     }
 
     public function isSuccess(): bool
@@ -45,7 +45,7 @@ final readonly class TriggerResult
 
     public function workflow(): WorkflowInstance
     {
-        return $this->workflow;
+        return $this->workflowInstance;
     }
 
     public function triggerType(): ?string

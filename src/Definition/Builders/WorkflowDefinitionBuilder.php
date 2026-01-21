@@ -9,12 +9,15 @@ use Maestro\Workflow\Contracts\ContextLoader;
 use Maestro\Workflow\Contracts\StepDefinition;
 use Maestro\Workflow\Definition\StepCollection;
 use Maestro\Workflow\Definition\WorkflowDefinition;
+use Maestro\Workflow\Exceptions\InvalidDefinitionKeyException;
+use Maestro\Workflow\Exceptions\InvalidDefinitionVersionException;
+use Maestro\Workflow\Exceptions\InvalidStepKeyException;
 use Maestro\Workflow\ValueObjects\DefinitionKey;
 use Maestro\Workflow\ValueObjects\DefinitionVersion;
 
 final class WorkflowDefinitionBuilder
 {
-    private DefinitionVersion $version;
+    private DefinitionVersion $definitionVersion;
 
     private string $displayName;
 
@@ -25,14 +28,14 @@ final class WorkflowDefinitionBuilder
     private ?string $contextLoaderClass = null;
 
     private function __construct(
-        private readonly DefinitionKey $key,
+        private readonly DefinitionKey $definitionKey,
     ) {
-        $this->version = DefinitionVersion::initial();
-        $this->displayName = $key->toString();
+        $this->definitionVersion = DefinitionVersion::initial();
+        $this->displayName = $definitionKey->toString();
     }
 
     /**
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionKeyException
+     * @throws InvalidDefinitionKeyException
      */
     public static function create(string $key): self
     {
@@ -40,11 +43,11 @@ final class WorkflowDefinitionBuilder
     }
 
     /**
-     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionVersionException
+     * @throws InvalidDefinitionVersionException
      */
     public function version(string $version): self
     {
-        $this->version = DefinitionVersion::fromString($version);
+        $this->definitionVersion = DefinitionVersion::fromString($version);
 
         return $this;
     }
@@ -66,9 +69,9 @@ final class WorkflowDefinitionBuilder
         return $this;
     }
 
-    public function addStep(StepDefinition $step): self
+    public function addStep(StepDefinition $stepDefinition): self
     {
-        $this->steps[] = $step;
+        $this->steps[] = $stepDefinition;
 
         return $this;
     }
@@ -78,13 +81,13 @@ final class WorkflowDefinitionBuilder
      *
      * @param Closure(SingleJobStepBuilder): SingleJobStepBuilder $configure
      *
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidStepKeyException
      */
     public function singleJob(string $key, Closure $configure): self
     {
-        $builder = SingleJobStepBuilder::create($key);
-        $configure($builder);
-        $this->steps[] = $builder->build();
+        $singleJobStepBuilder = SingleJobStepBuilder::create($key);
+        $configure($singleJobStepBuilder);
+        $this->steps[] = $singleJobStepBuilder->build();
 
         return $this;
     }
@@ -94,13 +97,13 @@ final class WorkflowDefinitionBuilder
      *
      * @param Closure(FanOutStepBuilder): FanOutStepBuilder $configure
      *
-     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     * @throws InvalidStepKeyException
      */
     public function fanOut(string $key, Closure $configure): self
     {
-        $builder = FanOutStepBuilder::create($key);
-        $configure($builder);
-        $this->steps[] = $builder->build();
+        $fanOutStepBuilder = FanOutStepBuilder::create($key);
+        $configure($fanOutStepBuilder);
+        $this->steps[] = $fanOutStepBuilder->build();
 
         return $this;
     }
@@ -108,8 +111,8 @@ final class WorkflowDefinitionBuilder
     public function build(): WorkflowDefinition
     {
         return WorkflowDefinition::create(
-            $this->key,
-            $this->version,
+            $this->definitionKey,
+            $this->definitionVersion,
             $this->displayName,
             StepCollection::fromArray($this->steps),
             $this->contextLoaderClass,

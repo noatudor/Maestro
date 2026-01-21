@@ -20,7 +20,7 @@ final readonly class StepOutputStore
 {
     public function __construct(
         private WorkflowId $workflowId,
-        private StepOutputRepository $repository,
+        private StepOutputRepository $stepOutputRepository,
     ) {}
 
     /**
@@ -36,9 +36,9 @@ final readonly class StepOutputStore
      */
     public function read(string $outputClass): StepOutput
     {
-        $output = $this->repository->find($this->workflowId, $outputClass);
+        $output = $this->stepOutputRepository->find($this->workflowId, $outputClass);
 
-        if ($output === null) {
+        if (! $output instanceof StepOutput) {
             throw MissingRequiredOutputException::inWorkflow($this->workflowId, $outputClass);
         }
 
@@ -52,7 +52,7 @@ final readonly class StepOutputStore
      */
     public function has(string $outputClass): bool
     {
-        return $this->repository->has($this->workflowId, $outputClass);
+        return $this->stepOutputRepository->has($this->workflowId, $outputClass);
     }
 
     /**
@@ -61,15 +61,15 @@ final readonly class StepOutputStore
      * For MergeableOutput instances, the repository handles atomic merge operations
      * with proper transaction and locking to prevent lost updates in fan-out scenarios.
      */
-    public function write(StepOutput $output): void
+    public function write(StepOutput $stepOutput): void
     {
-        if ($output instanceof MergeableOutput) {
-            $this->repository->saveWithAtomicMerge($this->workflowId, $output);
+        if ($stepOutput instanceof MergeableOutput) {
+            $this->stepOutputRepository->saveWithAtomicMerge($this->workflowId, $stepOutput);
 
             return;
         }
 
-        $this->repository->save($this->workflowId, $output);
+        $this->stepOutputRepository->save($this->workflowId, $stepOutput);
     }
 
     /**
@@ -79,7 +79,7 @@ final readonly class StepOutputStore
      */
     public function all(): array
     {
-        return $this->repository->findAllByWorkflowId($this->workflowId);
+        return $this->stepOutputRepository->findAllByWorkflowId($this->workflowId);
     }
 
     /**

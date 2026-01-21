@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Model;
+use Maestro\Workflow\Application\Job\OrchestratedJob;
+use Maestro\Workflow\Contracts\IdempotencyKeyGenerator;
+use Maestro\Workflow\Definition\Steps\AbstractStepDefinition;
+use Maestro\Workflow\Domain\Collections\AbstractCollection;
 use Maestro\Workflow\Exceptions\MaestroException;
 use Maestro\Workflow\MaestroServiceProvider;
 
@@ -18,9 +22,9 @@ arch('source files are final by default')
     ->ignoring([
         'Maestro\Workflow\Exceptions',
         'Maestro\Workflow\Tests',
-        'Maestro\Workflow\Definition\Steps\AbstractStepDefinition',
-        'Maestro\Workflow\Domain\Collections\AbstractCollection',
-        'Maestro\Workflow\Application\Job\OrchestratedJob',
+        AbstractStepDefinition::class,
+        AbstractCollection::class,
+        OrchestratedJob::class,
     ]);
 
 arch('contracts are interfaces')
@@ -54,7 +58,7 @@ arch('contracts have no dependencies on implementation')
         'Maestro\Workflow\Infrastructure',
     ])
     ->ignoring([
-        'Maestro\Workflow\Contracts\IdempotencyKeyGenerator',
+        IdempotencyKeyGenerator::class,
     ]);
 
 arch('no debugging functions are used')

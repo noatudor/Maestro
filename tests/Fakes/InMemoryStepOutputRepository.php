@@ -51,24 +51,24 @@ class InMemoryStepOutputRepository implements StepOutputRepository
         return isset($this->outputs[$workflowId->value][$outputClass]);
     }
 
-    public function save(WorkflowId $workflowId, StepOutput $output): void
+    public function save(WorkflowId $workflowId, StepOutput $stepOutput): void
     {
         if (! isset($this->outputs[$workflowId->value])) {
             $this->outputs[$workflowId->value] = [];
         }
 
-        $this->outputs[$workflowId->value][$output::class] = $output;
+        $this->outputs[$workflowId->value][$stepOutput::class] = $stepOutput;
     }
 
-    public function saveWithAtomicMerge(WorkflowId $workflowId, MergeableOutput $output): void
+    public function saveWithAtomicMerge(WorkflowId $workflowId, MergeableOutput $mergeableOutput): void
     {
-        $outputClass = $output::class;
+        $outputClass = $mergeableOutput::class;
 
         $existing = $this->find($workflowId, $outputClass);
 
-        $finalOutput = $output;
+        $finalOutput = $mergeableOutput;
         if ($existing instanceof MergeableOutput) {
-            $finalOutput = $existing->mergeWith($output);
+            $finalOutput = $existing->mergeWith($mergeableOutput);
         }
 
         $this->save($workflowId, $finalOutput);

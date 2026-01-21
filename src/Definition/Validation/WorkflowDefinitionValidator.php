@@ -15,25 +15,20 @@ use Maestro\Workflow\Definition\WorkflowDefinition;
  */
 final readonly class WorkflowDefinitionValidator
 {
-    private bool $checkClassExistence;
+    public function __construct(private bool $checkClassExistence = true) {}
 
-    public function __construct(bool $checkClassExistence = true)
-    {
-        $this->checkClassExistence = $checkClassExistence;
-    }
-
-    public function validate(WorkflowDefinition $definition): ValidationResult
+    public function validate(WorkflowDefinition $workflowDefinition): ValidationResult
     {
         $errors = [];
 
-        $errors = [...$errors, ...$this->validateNotEmpty($definition)];
-        $errors = [...$errors, ...$this->validateUniqueStepKeys($definition)];
-        $errors = [...$errors, ...$this->validateOutputDependencies($definition)];
+        $errors = [...$errors, ...$this->validateNotEmpty($workflowDefinition)];
+        $errors = [...$errors, ...$this->validateUniqueStepKeys($workflowDefinition)];
+        $errors = [...$errors, ...$this->validateOutputDependencies($workflowDefinition)];
 
         if ($this->checkClassExistence) {
-            $errors = [...$errors, ...$this->validateJobClassesExist($definition)];
-            $errors = [...$errors, ...$this->validateOutputClassesExist($definition)];
-            $errors = [...$errors, ...$this->validateContextLoaderExists($definition)];
+            $errors = [...$errors, ...$this->validateJobClassesExist($workflowDefinition)];
+            $errors = [...$errors, ...$this->validateOutputClassesExist($workflowDefinition)];
+            $errors = [...$errors, ...$this->validateContextLoaderExists($workflowDefinition)];
         }
 
         return $errors === [] ? ValidationResult::valid() : ValidationResult::invalid($errors);
@@ -42,9 +37,9 @@ final readonly class WorkflowDefinitionValidator
     /**
      * @return list<ValidationError>
      */
-    private function validateNotEmpty(WorkflowDefinition $definition): array
+    private function validateNotEmpty(WorkflowDefinition $workflowDefinition): array
     {
-        if ($definition->steps()->isEmpty()) {
+        if ($workflowDefinition->steps()->isEmpty()) {
             return [ValidationError::emptyWorkflow()];
         }
 
@@ -54,12 +49,12 @@ final readonly class WorkflowDefinitionValidator
     /**
      * @return list<ValidationError>
      */
-    private function validateUniqueStepKeys(WorkflowDefinition $definition): array
+    private function validateUniqueStepKeys(WorkflowDefinition $workflowDefinition): array
     {
         $errors = [];
         $seenKeys = [];
 
-        foreach ($definition->steps() as $step) {
+        foreach ($workflowDefinition->steps() as $step) {
             $keyString = $step->key()->toString();
 
             if (isset($seenKeys[$keyString])) {
@@ -75,14 +70,14 @@ final readonly class WorkflowDefinitionValidator
     /**
      * @return list<ValidationError>
      */
-    private function validateOutputDependencies(WorkflowDefinition $definition): array
+    private function validateOutputDependencies(WorkflowDefinition $workflowDefinition): array
     {
         $errors = [];
 
         /** @var list<class-string<StepOutput>> $availableOutputs */
         $availableOutputs = [];
 
-        foreach ($definition->steps() as $step) {
+        foreach ($workflowDefinition->steps() as $step) {
             foreach ($step->requires() as $requiredOutput) {
                 if (! in_array($requiredOutput, $availableOutputs, true)) {
                     $errors[] = ValidationError::missingRequiredOutput($step->key(), $requiredOutput);
@@ -101,11 +96,11 @@ final readonly class WorkflowDefinitionValidator
     /**
      * @return list<ValidationError>
      */
-    private function validateJobClassesExist(WorkflowDefinition $definition): array
+    private function validateJobClassesExist(WorkflowDefinition $workflowDefinition): array
     {
         $errors = [];
 
-        foreach ($definition->steps() as $step) {
+        foreach ($workflowDefinition->steps() as $step) {
             $jobClass = null;
 
             if ($step instanceof SingleJobStep) {
@@ -125,11 +120,11 @@ final readonly class WorkflowDefinitionValidator
     /**
      * @return list<ValidationError>
      */
-    private function validateOutputClassesExist(WorkflowDefinition $definition): array
+    private function validateOutputClassesExist(WorkflowDefinition $workflowDefinition): array
     {
         $errors = [];
 
-        foreach ($definition->steps() as $step) {
+        foreach ($workflowDefinition->steps() as $step) {
             foreach ($step->requires() as $requiredOutput) {
                 if (! class_exists($requiredOutput) && ! interface_exists($requiredOutput)) {
                     $errors[] = ValidationError::outputClassNotFound($step->key(), $requiredOutput);
@@ -148,9 +143,9 @@ final readonly class WorkflowDefinitionValidator
     /**
      * @return list<ValidationError>
      */
-    private function validateContextLoaderExists(WorkflowDefinition $definition): array
+    private function validateContextLoaderExists(WorkflowDefinition $workflowDefinition): array
     {
-        $loaderClass = $definition->contextLoaderClass();
+        $loaderClass = $workflowDefinition->contextLoaderClass();
 
         if ($loaderClass === null) {
             return [];
@@ -163,7 +158,7 @@ final readonly class WorkflowDefinitionValidator
         if (! is_a($loaderClass, ContextLoader::class, true)) {
             return [ValidationError::custom(
                 'INVALID_CONTEXT_LOADER',
-                "Context loader class '{$loaderClass}' does not implement ContextLoader interface",
+                sprintf("Context loader class '%s' does not implement ContextLoader interface", $loaderClass),
             )];
         }
 

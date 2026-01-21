@@ -33,7 +33,7 @@ describe('JobLifecycleMiddleware', function (): void {
         );
         $this->repository->save($jobRecord);
 
-        $this->middleware->handle($job, fn () => null);
+        $this->middleware->handle($job, static fn (): null => null);
 
         $updatedJob = $this->repository->findByJobUuid($this->jobUuid);
 
@@ -54,7 +54,7 @@ describe('JobLifecycleMiddleware', function (): void {
         );
         $this->repository->save($jobRecord);
 
-        $this->middleware->handle($job, fn () => null);
+        $this->middleware->handle($job, static fn (): null => null);
 
         $updatedJob = $this->repository->findByJobUuid($this->jobUuid);
 
@@ -77,7 +77,7 @@ describe('JobLifecycleMiddleware', function (): void {
         $this->repository->save($jobRecord);
 
         try {
-            $this->middleware->handle($job, fn () => throw new RuntimeException('Something went wrong'));
+            $this->middleware->handle($job, static fn () => throw new RuntimeException('Something went wrong'));
         } catch (RuntimeException) {
             // Expected
         }
@@ -101,7 +101,7 @@ describe('JobLifecycleMiddleware', function (): void {
         );
         $this->repository->save($jobRecord);
 
-        expect(fn () => $this->middleware->handle($job, fn () => throw new RuntimeException('Test error')))
+        expect(fn () => $this->middleware->handle($job, static fn () => throw new RuntimeException('Test error')))
             ->toThrow(RuntimeException::class, 'Test error');
     });
 
@@ -109,7 +109,7 @@ describe('JobLifecycleMiddleware', function (): void {
         $job = new TestOrchestratedJob($this->workflowId, $this->stepRunId, $this->jobUuid);
 
         $executed = false;
-        $this->middleware->handle($job, function () use (&$executed): void {
+        $this->middleware->handle($job, static function () use (&$executed): void {
             $executed = true;
         });
 
@@ -131,7 +131,7 @@ describe('JobLifecycleMiddleware', function (): void {
         $this->repository->save($jobRecord);
 
         $executed = false;
-        $this->middleware->handle($job, function () use (&$executed): void {
+        $this->middleware->handle($job, static function () use (&$executed): void {
             $executed = true;
         });
 

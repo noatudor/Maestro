@@ -4,13 +4,20 @@ declare(strict_types=1);
 
 namespace Maestro\Workflow\Application\Orchestration;
 
+use Deprecated;
+use Maestro\Workflow\Contracts\StepDefinition;
 use Maestro\Workflow\Contracts\StepRunRepository;
 use Maestro\Workflow\Contracts\WorkflowRepository;
+use Maestro\Workflow\Definition\WorkflowDefinition;
 use Maestro\Workflow\Definition\WorkflowDefinitionRegistry;
+use Maestro\Workflow\Domain\StepRun;
 use Maestro\Workflow\Domain\WorkflowInstance;
 use Maestro\Workflow\Exceptions\DefinitionNotFoundException;
+use Maestro\Workflow\Exceptions\InvalidStateTransitionException;
+use Maestro\Workflow\Exceptions\StepDependencyException;
 use Maestro\Workflow\Exceptions\WorkflowLockedException;
 use Maestro\Workflow\Exceptions\WorkflowNotFoundException;
+use Maestro\Workflow\ValueObjects\StepKey;
 use Maestro\Workflow\ValueObjects\WorkflowId;
 use Ramsey\Uuid\Uuid;
 
@@ -27,7 +34,7 @@ final readonly class WorkflowAdvancer
     public function __construct(
         private WorkflowRepository $workflowRepository,
         private StepRunRepository $stepRunRepository,
-        private WorkflowDefinitionRegistry $definitionRegistry,
+        private WorkflowDefinitionRegistry $workflowDefinitionRegistry,
         private StepFinalizer $stepFinalizer,
         private StepDispatcher $stepDispatcher,
         private FailurePolicyHandler $failurePolicyHandler,
@@ -43,14 +50,14 @@ final readonly class WorkflowAdvancer
      * @throws WorkflowNotFoundException
      * @throws DefinitionNotFoundException
      * @throws WorkflowLockedException
-     * @throws \Maestro\Workflow\Exceptions\InvalidStateTransitionException
-     * @throws \Maestro\Workflow\Exceptions\StepDependencyException
+     * @throws InvalidStateTransitionException
+     * @throws StepDependencyException
      */
     public function evaluate(WorkflowId $workflowId): void
     {
         $this->workflowRepository->withLockedWorkflow(
             $workflowId,
-            fn (WorkflowInstance $workflow) => $this->doEvaluate($workflow),
+            fn (WorkflowInstance $workflowInstance) => $this->doEvaluate($workflowInstance),
             self::DEFAULT_LOCK_TIMEOUT_SECONDS,
         );
     }
@@ -61,26 +68,25 @@ final readonly class WorkflowAdvancer
      * This method uses application-level locks stored in the database columns.
      * Prefer evaluate() for most use cases as it provides stronger guarantees.
      *
-     * @deprecated Use evaluate() instead for database-level locking
-     *
      * @throws WorkflowNotFoundException
      * @throws DefinitionNotFoundException
-     * @throws \Maestro\Workflow\Exceptions\InvalidStateTransitionException
-     * @throws \Maestro\Workflow\Exceptions\StepDependencyException
+     * @throws InvalidStateTransitionException
+     * @throws StepDependencyException
      */
+    #[Deprecated(message: 'Use evaluate() instead for database-level locking')]
     public function evaluateWithApplicationLock(WorkflowId $workflowId): void
     {
         $lockId = $this->generateLockId();
-        $workflow = $this->workflowRepository->findOrFail($workflowId);
+        $workflowInstance = $this->workflowRepository->findOrFail($workflowId);
 
-        if (! $this->acquireApplicationLock($workflow, $lockId)) {
+        if (! $this->acquireApplicationLock($workflowInstance, $lockId)) {
             return;
         }
 
         try {
-            $this->doEvaluate($workflow);
+            $this->doEvaluate($workflowInstance);
         } finally {
-            $this->releaseApplicationLock($workflow, $lockId);
+            $this->releaseApplicationLock($workflowInstance, $lockId);
         }
     }
 
@@ -88,43 +94,43 @@ final readonly class WorkflowAdvancer
      * Perform the actual evaluation logic.
      *
      * @throws DefinitionNotFoundException
-     * @throws \Maestro\Workflow\Exceptions\InvalidStateTransitionException
-     * @throws \Maestro\Workflow\Exceptions\StepDependencyException
+     * @throws InvalidStateTransitionException
+     * @throws StepDependencyException
      */
-    private function doEvaluate(WorkflowInstance $workflow): void
+    private function doEvaluate(WorkflowInstance $workflowInstance): void
     {
-        if ($workflow->isTerminal() || $workflow->isPaused()) {
+        if ($workflowInstance->isTerminal() || $workflowInstance->isPaused()) {
             return;
         }
 
-        if ($workflow->isPending()) {
-            $this->startWorkflow($workflow);
+        if ($workflowInstance->isPending()) {
+            $this->startWorkflow($workflowInstance);
 
             return;
         }
 
-        $currentStepKey = $workflow->currentStepKey();
-        if ($currentStepKey === null) {
+        $currentStepKey = $workflowInstance->currentStepKey();
+        if (! $currentStepKey instanceof StepKey) {
             return;
         }
 
-        $definition = $this->definitionRegistry->get(
-            $workflow->definitionKey,
-            $workflow->definitionVersion,
+        $workflowDefinition = $this->workflowDefinitionRegistry->get(
+            $workflowInstance->definitionKey,
+            $workflowInstance->definitionVersion,
         );
 
-        $stepDefinition = $definition->getStep($currentStepKey);
-        if ($stepDefinition === null) {
+        $stepDefinition = $workflowDefinition->getStep($currentStepKey);
+        if (! $stepDefinition instanceof StepDefinition) {
             return;
         }
 
         $stepRun = $this->stepRunRepository->findLatestByWorkflowIdAndStepKey(
-            $workflow->id,
+            $workflowInstance->id,
             $currentStepKey,
         );
 
-        if ($stepRun === null) {
-            $this->stepDispatcher->dispatchStep($workflow, $stepDefinition);
+        if (! $stepRun instanceof StepRun) {
+            $this->stepDispatcher->dispatchStep($workflowInstance, $stepDefinition);
 
             return;
         }
@@ -140,13 +146,13 @@ final readonly class WorkflowAdvancer
         }
 
         if ($stepRun->isFailed()) {
-            $this->failurePolicyHandler->handle($workflow, $stepRun, $stepDefinition);
+            $this->failurePolicyHandler->handle($workflowInstance, $stepRun, $stepDefinition);
 
             return;
         }
 
         if ($stepRun->isSucceeded()) {
-            $this->advanceToNextStep($workflow, $definition);
+            $this->advanceToNextStep($workflowInstance, $workflowDefinition);
         }
     }
 
@@ -154,72 +160,72 @@ final readonly class WorkflowAdvancer
      * Start a workflow by dispatching its first step.
      *
      * @throws DefinitionNotFoundException
-     * @throws \Maestro\Workflow\Exceptions\InvalidStateTransitionException
-     * @throws \Maestro\Workflow\Exceptions\StepDependencyException
+     * @throws InvalidStateTransitionException
+     * @throws StepDependencyException
      */
-    private function startWorkflow(WorkflowInstance $workflow): void
+    private function startWorkflow(WorkflowInstance $workflowInstance): void
     {
-        $definition = $this->definitionRegistry->get(
-            $workflow->definitionKey,
-            $workflow->definitionVersion,
+        $workflowDefinition = $this->workflowDefinitionRegistry->get(
+            $workflowInstance->definitionKey,
+            $workflowInstance->definitionVersion,
         );
 
-        $firstStep = $definition->getFirstStep();
-        if ($firstStep === null) {
-            $workflow->succeed();
-            $this->workflowRepository->save($workflow);
+        $firstStep = $workflowDefinition->getFirstStep();
+        if (! $firstStep instanceof StepDefinition) {
+            $workflowInstance->succeed();
+            $this->workflowRepository->save($workflowInstance);
 
             return;
         }
 
-        $workflow->start($firstStep->key());
-        $this->workflowRepository->save($workflow);
+        $workflowInstance->start($firstStep->key());
+        $this->workflowRepository->save($workflowInstance);
 
-        $this->stepDispatcher->dispatchStep($workflow, $firstStep);
+        $this->stepDispatcher->dispatchStep($workflowInstance, $firstStep);
     }
 
     /**
      * Advance workflow to the next step or mark as completed.
      *
-     * @throws \Maestro\Workflow\Exceptions\InvalidStateTransitionException
-     * @throws \Maestro\Workflow\Exceptions\StepDependencyException
+     * @throws InvalidStateTransitionException
+     * @throws StepDependencyException
      * @throws DefinitionNotFoundException
      */
     private function advanceToNextStep(
-        WorkflowInstance $workflow,
-        \Maestro\Workflow\Definition\WorkflowDefinition $definition,
+        WorkflowInstance $workflowInstance,
+        WorkflowDefinition $workflowDefinition,
     ): void {
-        $currentStepKey = $workflow->currentStepKey();
-        if ($currentStepKey === null) {
+        $currentStepKey = $workflowInstance->currentStepKey();
+        if (! $currentStepKey instanceof StepKey) {
             return;
         }
 
-        if ($definition->isLastStep($currentStepKey)) {
-            $workflow->succeed();
-            $this->workflowRepository->save($workflow);
-
-            return;
-        }
-
-        $nextStep = $definition->getNextStep($currentStepKey);
-        if ($nextStep === null) {
-            $workflow->succeed();
-            $this->workflowRepository->save($workflow);
+        if ($workflowDefinition->isLastStep($currentStepKey)) {
+            $workflowInstance->succeed();
+            $this->workflowRepository->save($workflowInstance);
 
             return;
         }
 
-        $workflow->advanceToStep($nextStep->key());
-        $this->workflowRepository->save($workflow);
+        $nextStep = $workflowDefinition->getNextStep($currentStepKey);
+        if (! $nextStep instanceof StepDefinition) {
+            $workflowInstance->succeed();
+            $this->workflowRepository->save($workflowInstance);
 
-        $this->stepDispatcher->dispatchStep($workflow, $nextStep);
+            return;
+        }
+
+        $workflowInstance->advanceToStep($nextStep->key());
+        $this->workflowRepository->save($workflowInstance);
+
+        $this->stepDispatcher->dispatchStep($workflowInstance, $nextStep);
     }
 
-    private function acquireApplicationLock(WorkflowInstance $workflow, string $lockId): bool
+    private function acquireApplicationLock(WorkflowInstance $workflowInstance, string $lockId): bool
     {
         try {
-            $workflow->acquireLock($lockId);
-            $this->workflowRepository->save($workflow);
+            $workflowInstance->acquireLock($lockId);
+            $this->workflowRepository->save($workflowInstance);
 
             return true;
         } catch (WorkflowLockedException) {
@@ -227,10 +233,10 @@ final readonly class WorkflowAdvancer
         }
     }
 
-    private function releaseApplicationLock(WorkflowInstance $workflow, string $lockId): void
+    private function releaseApplicationLock(WorkflowInstance $workflowInstance, string $lockId): void
     {
-        $workflow->releaseLock($lockId);
-        $this->workflowRepository->save($workflow);
+        $workflowInstance->releaseLock($lockId);
+        $this->workflowRepository->save($workflowInstance);
     }
 
     private function generateLockId(): string

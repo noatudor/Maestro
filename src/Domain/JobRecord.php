@@ -22,7 +22,7 @@ final class JobRecord
         public readonly string $queue,
         public readonly CarbonImmutable $dispatchedAt,
         public readonly CarbonImmutable $createdAt,
-        private JobState $status,
+        private JobState $jobState,
         private int $attempt,
         private ?CarbonImmutable $startedAt,
         private ?CarbonImmutable $finishedAt,
@@ -43,12 +43,12 @@ final class JobRecord
         string $jobUuid,
         string $jobClass,
         string $queue,
-        ?JobId $id = null,
+        ?JobId $jobId = null,
     ): self {
         $now = CarbonImmutable::now();
 
         return new self(
-            id: $id ?? JobId::generate(),
+            id: $jobId ?? JobId::generate(),
             workflowId: $workflowId,
             stepRunId: $stepRunId,
             jobUuid: $jobUuid,
@@ -56,7 +56,7 @@ final class JobRecord
             queue: $queue,
             dispatchedAt: $now,
             createdAt: $now,
-            status: JobState::Dispatched,
+            jobState: JobState::Dispatched,
             attempt: 1,
             startedAt: null,
             finishedAt: null,
@@ -70,13 +70,13 @@ final class JobRecord
     }
 
     public static function reconstitute(
-        JobId $id,
+        JobId $jobId,
         WorkflowId $workflowId,
         StepRunId $stepRunId,
         string $jobUuid,
         string $jobClass,
         string $queue,
-        JobState $status,
+        JobState $jobState,
         int $attempt,
         CarbonImmutable $dispatchedAt,
         ?CarbonImmutable $startedAt,
@@ -90,7 +90,7 @@ final class JobRecord
         CarbonImmutable $updatedAt,
     ): self {
         return new self(
-            id: $id,
+            id: $jobId,
             workflowId: $workflowId,
             stepRunId: $stepRunId,
             jobUuid: $jobUuid,
@@ -98,7 +98,7 @@ final class JobRecord
             queue: $queue,
             dispatchedAt: $dispatchedAt,
             createdAt: $createdAt,
-            status: $status,
+            jobState: $jobState,
             attempt: $attempt,
             startedAt: $startedAt,
             finishedAt: $finishedAt,
@@ -113,7 +113,7 @@ final class JobRecord
 
     public function status(): JobState
     {
-        return $this->status;
+        return $this->jobState;
     }
 
     public function attempt(): int
@@ -163,27 +163,27 @@ final class JobRecord
 
     public function isDispatched(): bool
     {
-        return $this->status === JobState::Dispatched;
+        return $this->jobState === JobState::Dispatched;
     }
 
     public function isRunning(): bool
     {
-        return $this->status === JobState::Running;
+        return $this->jobState === JobState::Running;
     }
 
     public function isSucceeded(): bool
     {
-        return $this->status === JobState::Succeeded;
+        return $this->jobState === JobState::Succeeded;
     }
 
     public function isFailed(): bool
     {
-        return $this->status === JobState::Failed;
+        return $this->jobState === JobState::Failed;
     }
 
     public function isTerminal(): bool
     {
-        return $this->status->isTerminal();
+        return $this->jobState->isTerminal();
     }
 
     /**
@@ -238,7 +238,7 @@ final class JobRecord
 
     public function queueWaitTime(): ?int
     {
-        if ($this->startedAt === null) {
+        if (! $this->startedAt instanceof CarbonImmutable) {
             return null;
         }
 
@@ -248,18 +248,18 @@ final class JobRecord
     /**
      * @throws InvalidStateTransitionException
      */
-    private function transitionTo(JobState $target): void
+    private function transitionTo(JobState $jobState): void
     {
-        if (! $this->status->canTransitionTo($target)) {
-            throw InvalidStateTransitionException::forJob($this->status, $target);
+        if (! $this->jobState->canTransitionTo($jobState)) {
+            throw InvalidStateTransitionException::forJob($this->jobState, $jobState);
         }
 
-        $this->status = $target;
+        $this->jobState = $jobState;
     }
 
     private function calculateRuntime(): void
     {
-        if ($this->startedAt !== null && $this->finishedAt !== null) {
+        if ($this->startedAt instanceof CarbonImmutable && $this->finishedAt instanceof CarbonImmutable) {
             $this->runtimeMs = (int) $this->startedAt->diffInMilliseconds($this->finishedAt);
         }
     }

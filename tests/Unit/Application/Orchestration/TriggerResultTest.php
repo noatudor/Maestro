@@ -6,6 +6,7 @@ use Maestro\Workflow\Application\Orchestration\TriggerResult;
 use Maestro\Workflow\Domain\WorkflowInstance;
 use Maestro\Workflow\ValueObjects\DefinitionKey;
 use Maestro\Workflow\ValueObjects\DefinitionVersion;
+use Maestro\Workflow\ValueObjects\StepKey;
 
 describe('TriggerResult', function (): void {
     beforeEach(function (): void {
@@ -17,37 +18,37 @@ describe('TriggerResult', function (): void {
 
     describe('success', function (): void {
         it('creates successful result', function (): void {
-            $result = TriggerResult::success($this->workflow, 'webhook');
+            $triggerResult = TriggerResult::success($this->workflow, 'webhook');
 
-            expect($result->isSuccess())->toBeTrue();
-            expect($result->workflow())->toBe($this->workflow);
-            expect($result->triggerType())->toBe('webhook');
-            expect($result->failureReason())->toBeNull();
+            expect($triggerResult->isSuccess())->toBeTrue();
+            expect($triggerResult->workflow())->toBe($this->workflow);
+            expect($triggerResult->triggerType())->toBe('webhook');
+            expect($triggerResult->failureReason())->toBeNull();
         });
     });
 
     describe('workflowTerminal', function (): void {
         it('creates terminal state result', function (): void {
-            $this->workflow->start(Maestro\Workflow\ValueObjects\StepKey::fromString('step-1'));
+            $this->workflow->start(StepKey::fromString('step-1'));
             $this->workflow->succeed();
 
-            $result = TriggerResult::workflowTerminal($this->workflow);
+            $triggerResult = TriggerResult::workflowTerminal($this->workflow);
 
-            expect($result->isSuccess())->toBeFalse();
-            expect($result->workflow())->toBe($this->workflow);
-            expect($result->triggerType())->toBeNull();
-            expect($result->failureReason())->toContain('succeeded');
+            expect($triggerResult->isSuccess())->toBeFalse();
+            expect($triggerResult->workflow())->toBe($this->workflow);
+            expect($triggerResult->triggerType())->toBeNull();
+            expect($triggerResult->failureReason())->toContain('succeeded');
         });
     });
 
     describe('transitionFailed', function (): void {
         it('creates transition failed result', function (): void {
-            $result = TriggerResult::transitionFailed($this->workflow, 'Invalid state transition');
+            $triggerResult = TriggerResult::transitionFailed($this->workflow, 'Invalid state transition');
 
-            expect($result->isSuccess())->toBeFalse();
-            expect($result->workflow())->toBe($this->workflow);
-            expect($result->triggerType())->toBeNull();
-            expect($result->failureReason())->toBe('Invalid state transition');
+            expect($triggerResult->isSuccess())->toBeFalse();
+            expect($triggerResult->workflow())->toBe($this->workflow);
+            expect($triggerResult->triggerType())->toBeNull();
+            expect($triggerResult->failureReason())->toBe('Invalid state transition');
         });
     });
 });

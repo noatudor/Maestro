@@ -13,11 +13,11 @@ use Maestro\Workflow\ValueObjects\WorkflowId;
 final readonly class StepOutputStoreFactory
 {
     public function __construct(
-        private StepOutputRepository $repository,
+        private StepOutputRepository $stepOutputRepository,
     ) {}
 
     public function forWorkflow(WorkflowId $workflowId): StepOutputStore
     {
-        return new StepOutputStore($workflowId, $this->repository);
+        return new StepOutputStore($workflowId, $this->stepOutputRepository);
     }
 }

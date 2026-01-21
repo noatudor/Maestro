@@ -9,7 +9,6 @@ use Maestro\Workflow\Contracts\FanOutStep;
 use Maestro\Workflow\Contracts\JobLedgerRepository;
 use Maestro\Workflow\Contracts\StepDefinition;
 use Maestro\Workflow\Contracts\StepRunRepository;
-use Maestro\Workflow\Definition\Config\NOfMCriteria;
 use Maestro\Workflow\Domain\StepRun;
 use Maestro\Workflow\Enums\JobState;
 
@@ -41,13 +40,13 @@ final readonly class StepFinalizer
             return StepFinalizationResult::notReady($stepRun);
         }
 
-        $jobStats = $this->calculateJobStats($stepRun);
+        $stepJobStats = $this->calculateJobStats($stepRun);
 
-        if (! $jobStats->allJobsComplete()) {
+        if (! $stepJobStats->allJobsComplete()) {
             return StepFinalizationResult::notReady($stepRun);
         }
 
-        $success = $this->evaluateSuccess($stepDefinition, $jobStats);
+        $success = $this->evaluateSuccess($stepDefinition, $stepJobStats);
         $finishedAt = CarbonImmutable::now();
 
         if ($success) {
@@ -59,8 +58,8 @@ final readonly class StepFinalizer
             $finalized = $this->stepRunRepository->finalizeAsFailed(
                 $stepRun->id,
                 'STEP_FAILED',
-                $this->buildFailureMessage($jobStats),
-                $jobStats->failed,
+                $this->buildFailureMessage($stepJobStats),
+                $stepJobStats->failed,
                 $finishedAt,
             );
         }
@@ -70,7 +69,7 @@ final readonly class StepFinalizer
         }
 
         $updatedStepRun = $this->stepRunRepository->find($stepRun->id);
-        if ($updatedStepRun === null) {
+        if (! $updatedStepRun instanceof StepRun) {
             return StepFinalizationResult::alreadyFinalized($stepRun);
         }
 
@@ -86,9 +85,9 @@ final readonly class StepFinalizer
             return false;
         }
 
-        $jobStats = $this->calculateJobStats($stepRun);
+        $stepJobStats = $this->calculateJobStats($stepRun);
 
-        return $jobStats->allJobsComplete();
+        return $stepJobStats->allJobsComplete();
     }
 
     /**
@@ -134,36 +133,32 @@ final readonly class StepFinalizer
     /**
      * Evaluate success based on the step definition's criteria.
      */
-    private function evaluateSuccess(StepDefinition $stepDefinition, StepJobStats $stats): bool
+    private function evaluateSuccess(StepDefinition $stepDefinition, StepJobStats $stepJobStats): bool
     {
-        if ($stats->total === 0) {
+        if ($stepJobStats->total === 0) {
             return true;
         }
 
         if ($stepDefinition instanceof FanOutStep) {
-            return $this->evaluateFanOutSuccess($stepDefinition, $stats);
+            return $this->evaluateFanOutSuccess($stepDefinition, $stepJobStats);
         }
 
-        return $stats->failed === 0;
+        return $stepJobStats->failed === 0;
     }
 
-    private function evaluateFanOutSuccess(FanOutStep $stepDefinition, StepJobStats $stats): bool
+    private function evaluateFanOutSuccess(FanOutStep $fanOutStep, StepJobStats $stepJobStats): bool
     {
-        $criteria = $stepDefinition->successCriteria();
+        $criteria = $fanOutStep->successCriteria();
 
-        if ($criteria instanceof NOfMCriteria) {
-            return $criteria->evaluate($stats->succeeded, $stats->total);
-        }
-
-        return $criteria->evaluate($stats->succeeded, $stats->total);
+        return $criteria->evaluate($stepJobStats->succeeded, $stepJobStats->total);
     }
 
-    private function buildFailureMessage(StepJobStats $stats): string
+    private function buildFailureMessage(StepJobStats $stepJobStats): string
     {
         return sprintf(
             '%d of %d jobs failed',
-            $stats->failed,
-            $stats->total,
+            $stepJobStats->failed,
+            $stepJobStats->total,
         );
     }
 }

@@ -49,50 +49,50 @@ final class StepRunCollection extends AbstractCollection
 
     public function pending(): self
     {
-        return $this->filter(fn (StepRun $stepRun): bool => $stepRun->isPending());
+        return $this->filter(static fn (StepRun $stepRun): bool => $stepRun->isPending());
     }
 
     public function running(): self
     {
-        return $this->filter(fn (StepRun $stepRun): bool => $stepRun->isRunning());
+        return $this->filter(static fn (StepRun $stepRun): bool => $stepRun->isRunning());
     }
 
     public function succeeded(): self
     {
-        return $this->filter(fn (StepRun $stepRun): bool => $stepRun->isSucceeded());
+        return $this->filter(static fn (StepRun $stepRun): bool => $stepRun->isSucceeded());
     }
 
     public function failed(): self
     {
-        return $this->filter(fn (StepRun $stepRun): bool => $stepRun->isFailed());
+        return $this->filter(static fn (StepRun $stepRun): bool => $stepRun->isFailed());
     }
 
     public function terminal(): self
     {
-        return $this->filter(fn (StepRun $stepRun): bool => $stepRun->isTerminal());
+        return $this->filter(static fn (StepRun $stepRun): bool => $stepRun->isTerminal());
     }
 
-    public function byState(StepState $state): self
+    public function byState(StepState $stepState): self
     {
-        return $this->filter(fn (StepRun $stepRun): bool => $stepRun->status() === $state);
+        return $this->filter(static fn (StepRun $stepRun): bool => $stepRun->status() === $stepState);
     }
 
     public function findByKey(StepKey $stepKey): ?StepRun
     {
-        return $this->first(fn (StepRun $stepRun): bool => $stepRun->stepKey->equals($stepKey));
+        return $this->first(static fn (StepRun $stepRun): bool => $stepRun->stepKey->equals($stepKey));
     }
 
     public function findLatestByKey(StepKey $stepKey): ?StepRun
     {
-        $matching = $this->filter(fn (StepRun $stepRun): bool => $stepRun->stepKey->equals($stepKey));
+        $stepRunCollection = $this->filter(static fn (StepRun $stepRun): bool => $stepRun->stepKey->equals($stepKey));
 
-        if ($matching->isEmpty()) {
+        if ($stepRunCollection->isEmpty()) {
             return null;
         }
 
         $latest = null;
-        foreach ($matching as $stepRun) {
-            if ($latest === null || $stepRun->attempt > $latest->attempt) {
+        foreach ($stepRunCollection as $stepRun) {
+            if (! $latest instanceof StepRun || $stepRun->attempt > $latest->attempt) {
                 $latest = $stepRun;
             }
         }
@@ -102,16 +102,16 @@ final class StepRunCollection extends AbstractCollection
 
     public function forAttempt(int $attempt): self
     {
-        return $this->filter(fn (StepRun $stepRun): bool => $stepRun->attempt === $attempt);
+        return $this->filter(static fn (StepRun $stepRun): bool => $stepRun->attempt === $attempt);
     }
 
     public function latestAttempts(): self
     {
         $latestByKey = [];
-        foreach ($this->items as $stepRun) {
-            $key = $stepRun->stepKey->value;
-            if (! isset($latestByKey[$key]) || $stepRun->attempt > $latestByKey[$key]->attempt) {
-                $latestByKey[$key] = $stepRun;
+        foreach ($this->items as $item) {
+            $key = $item->stepKey->value;
+            if (! isset($latestByKey[$key]) || $item->attempt > $latestByKey[$key]->attempt) {
+                $latestByKey[$key] = $item;
             }
         }
 
@@ -120,26 +120,26 @@ final class StepRunCollection extends AbstractCollection
 
     public function totalJobCount(): int
     {
-        return (int) $this->sum(fn (StepRun $stepRun): int => $stepRun->totalJobCount());
+        return (int) $this->sum(static fn (StepRun $stepRun): int => $stepRun->totalJobCount());
     }
 
     public function totalFailedJobCount(): int
     {
-        return (int) $this->sum(fn (StepRun $stepRun): int => $stepRun->failedJobCount());
+        return (int) $this->sum(static fn (StepRun $stepRun): int => $stepRun->failedJobCount());
     }
 
     public function hasAnyFailed(): bool
     {
-        return $this->any(fn (StepRun $stepRun): bool => $stepRun->isFailed());
+        return $this->any(static fn (StepRun $stepRun): bool => $stepRun->isFailed());
     }
 
     public function areAllSucceeded(): bool
     {
-        return $this->isNotEmpty() && $this->every(fn (StepRun $stepRun): bool => $stepRun->isSucceeded());
+        return $this->isNotEmpty() && $this->every(static fn (StepRun $stepRun): bool => $stepRun->isSucceeded());
     }
 
     public function areAllTerminal(): bool
     {
-        return $this->isNotEmpty() && $this->every(fn (StepRun $stepRun): bool => $stepRun->isTerminal());
+        return $this->isNotEmpty() && $this->every(static fn (StepRun $stepRun): bool => $stepRun->isTerminal());
     }
 }

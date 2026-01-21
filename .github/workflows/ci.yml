@@ -50,27 +50,6 @@ jobs:
       - name: Check code style
         run: vendor/bin/pint --test
 
-  static-analysis:
-    name: Static Analysis
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          coverage: none
-
-      - name: Install dependencies
-        uses: ramsey/composer-install@v3
-
-      - name: Run PHPStan
-        run: vendor/bin/phpstan analyse --error-format=github --memory-limit=2G
-
   rector:
     name: Rector
     runs-on: ubuntu-latest
@@ -91,6 +70,28 @@ jobs:
 
       - name: Run Rector
         run: vendor/bin/rector process --dry-run --ansi
+
+  static-analysis:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [rector]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Install dependencies
+        uses: ramsey/composer-install@v3
+
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse --error-format=github --memory-limit=2G
 
   test-mysql:
     name: Tests MySQL - P${{ matrix.php }} - L${{ matrix.laravel }}

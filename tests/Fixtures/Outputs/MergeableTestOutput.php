@@ -21,12 +21,12 @@ final readonly class MergeableTestOutput implements MergeableOutput
         return StepKey::fromString('mergeable-step');
     }
 
-    public function mergeWith(MergeableOutput $other): MergeableOutput
+    public function mergeWith(MergeableOutput $mergeableOutput): MergeableOutput
     {
-        if (! $other instanceof self) {
+        if (! $mergeableOutput instanceof self) {
             return $this;
         }
 
-        return new self([...$this->items, ...$other->items]);
+        return new self([...$this->items, ...$mergeableOutput->items]);
     }
 }

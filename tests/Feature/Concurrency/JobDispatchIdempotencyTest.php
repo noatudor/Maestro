@@ -31,13 +31,13 @@ describe('Job dispatch idempotency with real database', function (): void {
             DB::connection(),
         );
 
-        $workflow = WorkflowInstance::create(
+        $workflowInstance = WorkflowInstance::create(
             definitionKey: DefinitionKey::fromString('test-workflow'),
             definitionVersion: DefinitionVersion::fromString('1.0.0'),
         );
-        $workflowRepository->save($workflow);
+        $workflowRepository->save($workflowInstance);
 
-        $this->workflowId = $workflow->id;
+        $this->workflowId = $workflowInstance->id;
     });
 
     describe('findByJobUuid', function (): void {
@@ -50,14 +50,14 @@ describe('Job dispatch idempotency with real database', function (): void {
             $this->stepRunRepository->save($stepRun);
 
             $jobUuid = Uuid::uuid7()->toString();
-            $job = JobRecord::create(
+            $jobRecord = JobRecord::create(
                 workflowId: $this->workflowId,
                 stepRunId: $stepRun->id,
                 jobUuid: $jobUuid,
                 jobClass: 'TestJob',
                 queue: 'default',
             );
-            $this->jobLedgerRepository->save($job);
+            $this->jobLedgerRepository->save($jobRecord);
 
             $found = $this->jobLedgerRepository->findByJobUuid($jobUuid);
 
@@ -84,14 +84,14 @@ describe('Job dispatch idempotency with real database', function (): void {
             $this->stepRunRepository->save($stepRun);
 
             $jobUuid = Uuid::uuid7()->toString();
-            $job = JobRecord::create(
+            $jobRecord = JobRecord::create(
                 workflowId: $this->workflowId,
                 stepRunId: $stepRun->id,
                 jobUuid: $jobUuid,
                 jobClass: 'TestJob',
                 queue: 'default',
             );
-            $this->jobLedgerRepository->save($job);
+            $this->jobLedgerRepository->save($jobRecord);
 
             $exists = $this->jobLedgerRepository->existsByJobUuid($jobUuid);
 
@@ -121,14 +121,14 @@ describe('Job dispatch idempotency with real database', function (): void {
             $existingJob = $this->jobLedgerRepository->findByJobUuid($jobUuid);
             expect($existingJob)->toBeNull();
 
-            $job = JobRecord::create(
+            $jobRecord = JobRecord::create(
                 workflowId: $this->workflowId,
                 stepRunId: $stepRun->id,
                 jobUuid: $jobUuid,
                 jobClass: 'TestJob',
                 queue: 'default',
             );
-            $this->jobLedgerRepository->save($job);
+            $this->jobLedgerRepository->save($jobRecord);
 
             $existingJobAfterSave = $this->jobLedgerRepository->findByJobUuid($jobUuid);
             expect($existingJobAfterSave)->not->toBeNull();
@@ -145,24 +145,24 @@ describe('Job dispatch idempotency with real database', function (): void {
             $this->stepRunRepository->save($stepRun);
 
             $jobUuid = Uuid::uuid7()->toString();
-            $job = JobRecord::create(
+            $jobRecord = JobRecord::create(
                 workflowId: $this->workflowId,
                 stepRunId: $stepRun->id,
                 jobUuid: $jobUuid,
                 jobClass: 'TestJob',
                 queue: 'default',
             );
-            $this->jobLedgerRepository->save($job);
+            $this->jobLedgerRepository->save($jobRecord);
 
             $result = $this->jobLedgerRepository->updateStatusAtomically(
-                $job->id,
+                $jobRecord->id,
                 JobState::Dispatched,
                 JobState::Running,
             );
 
             expect($result)->toBeTrue();
 
-            $reloaded = $this->jobLedgerRepository->findOrFail($job->id);
+            $reloaded = $this->jobLedgerRepository->findOrFail($jobRecord->id);
             expect($reloaded->status())->toBe(JobState::Running);
         });
 
@@ -175,18 +175,18 @@ describe('Job dispatch idempotency with real database', function (): void {
             $this->stepRunRepository->save($stepRun);
 
             $jobUuid = Uuid::uuid7()->toString();
-            $job = JobRecord::create(
+            $jobRecord = JobRecord::create(
                 workflowId: $this->workflowId,
                 stepRunId: $stepRun->id,
                 jobUuid: $jobUuid,
                 jobClass: 'TestJob',
                 queue: 'default',
             );
-            $job->start('worker-1');
-            $this->jobLedgerRepository->save($job);
+            $jobRecord->start('worker-1');
+            $this->jobLedgerRepository->save($jobRecord);
 
             $result = $this->jobLedgerRepository->updateStatusAtomically(
-                $job->id,
+                $jobRecord->id,
                 JobState::Dispatched,
                 JobState::Running,
             );
@@ -203,23 +203,23 @@ describe('Job dispatch idempotency with real database', function (): void {
             $this->stepRunRepository->save($stepRun);
 
             $jobUuid = Uuid::uuid7()->toString();
-            $job = JobRecord::create(
+            $jobRecord = JobRecord::create(
                 workflowId: $this->workflowId,
                 stepRunId: $stepRun->id,
                 jobUuid: $jobUuid,
                 jobClass: 'TestJob',
                 queue: 'default',
             );
-            $this->jobLedgerRepository->save($job);
+            $this->jobLedgerRepository->save($jobRecord);
 
             $firstResult = $this->jobLedgerRepository->updateStatusAtomically(
-                $job->id,
+                $jobRecord->id,
                 JobState::Dispatched,
                 JobState::Running,
             );
 
             $secondResult = $this->jobLedgerRepository->updateStatusAtomically(
-                $job->id,
+                $jobRecord->id,
                 JobState::Dispatched,
                 JobState::Succeeded,
             );
@@ -227,7 +227,7 @@ describe('Job dispatch idempotency with real database', function (): void {
             expect($firstResult)->toBeTrue();
             expect($secondResult)->toBeFalse();
 
-            $reloaded = $this->jobLedgerRepository->findOrFail($job->id);
+            $reloaded = $this->jobLedgerRepository->findOrFail($jobRecord->id);
             expect($reloaded->status())->toBe(JobState::Running);
         });
     });
@@ -241,16 +241,16 @@ describe('Job dispatch idempotency with real database', function (): void {
             );
             $this->stepRunRepository->save($stepRun);
 
-            $job1 = JobRecord::create(
+            $jobRecord = JobRecord::create(
                 workflowId: $this->workflowId,
                 stepRunId: $stepRun->id,
                 jobUuid: Uuid::uuid7()->toString(),
                 jobClass: 'TestJob',
                 queue: 'default',
             );
-            $job1->start('worker-1');
-            $job1->succeed();
-            $this->jobLedgerRepository->save($job1);
+            $jobRecord->start('worker-1');
+            $jobRecord->succeed();
+            $this->jobLedgerRepository->save($jobRecord);
 
             $job2 = JobRecord::create(
                 workflowId: $this->workflowId,
@@ -276,16 +276,16 @@ describe('Job dispatch idempotency with real database', function (): void {
             );
             $this->stepRunRepository->save($stepRun);
 
-            $job1 = JobRecord::create(
+            $jobRecord = JobRecord::create(
                 workflowId: $this->workflowId,
                 stepRunId: $stepRun->id,
                 jobUuid: Uuid::uuid7()->toString(),
                 jobClass: 'TestJob',
                 queue: 'default',
             );
-            $job1->start('worker-1');
-            $job1->succeed();
-            $this->jobLedgerRepository->save($job1);
+            $jobRecord->start('worker-1');
+            $jobRecord->succeed();
+            $this->jobLedgerRepository->save($jobRecord);
 
             $job2 = JobRecord::create(
                 workflowId: $this->workflowId,

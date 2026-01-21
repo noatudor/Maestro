@@ -63,8 +63,8 @@ describe('JobDispatchService', function (): void {
 
             $this->dispatcher->allows('dispatch');
 
-            $config = QueueConfiguration::create('high-priority', 'redis', 30);
-            $this->service->dispatch($job, $config);
+            $queueConfiguration = QueueConfiguration::create('high-priority', 'redis', 30);
+            $this->service->dispatch($job, $queueConfiguration);
 
             expect($job->queue)->toBe('high-priority');
             expect($job->connection)->toBe('redis');
@@ -79,8 +79,8 @@ describe('JobDispatchService', function (): void {
 
             $this->dispatcher->allows('dispatch');
 
-            $config = QueueConfiguration::onQueue('emails');
-            $this->service->dispatch($job, $config);
+            $queueConfiguration = QueueConfiguration::onQueue('emails');
+            $this->service->dispatch($job, $queueConfiguration);
 
             $ledgerEntry = $this->repository->findByJobUuid('test-uuid-queue');
 

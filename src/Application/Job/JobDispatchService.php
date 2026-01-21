@@ -27,7 +27,7 @@ final readonly class JobDispatchService
 {
     public function __construct(
         private Dispatcher $dispatcher,
-        private JobLedgerRepository $jobLedger,
+        private JobLedgerRepository $jobLedgerRepository,
     ) {}
 
     /**
@@ -42,27 +42,27 @@ final readonly class JobDispatchService
      * @return string The job UUID
      */
     public function dispatch(
-        OrchestratedJob $job,
-        QueueConfiguration $queueConfig,
+        OrchestratedJob $orchestratedJob,
+        QueueConfiguration $queueConfiguration,
     ): string {
-        $this->applyQueueConfiguration($job, $queueConfig);
+        $this->applyQueueConfiguration($orchestratedJob, $queueConfiguration);
 
-        if ($this->jobLedger->findByJobUuid($job->jobUuid) !== null) {
-            return $job->jobUuid;
+        if ($this->jobLedgerRepository->findByJobUuid($orchestratedJob->jobUuid) instanceof JobRecord) {
+            return $orchestratedJob->jobUuid;
         }
 
         $jobRecord = JobRecord::create(
-            workflowId: $job->workflowId,
-            stepRunId: $job->stepRunId,
-            jobUuid: $job->jobUuid,
-            jobClass: $job::class,
-            queue: $this->resolveQueueName($job, $queueConfig),
+            workflowId: $orchestratedJob->workflowId,
+            stepRunId: $orchestratedJob->stepRunId,
+            jobUuid: $orchestratedJob->jobUuid,
+            jobClass: $orchestratedJob::class,
+            queue: $this->resolveQueueName($orchestratedJob, $queueConfiguration),
         );
 
-        $this->jobLedger->save($jobRecord);
-        $this->dispatcher->dispatch($job);
+        $this->jobLedgerRepository->save($jobRecord);
+        $this->dispatcher->dispatch($orchestratedJob);
 
-        return $job->jobUuid;
+        return $orchestratedJob->jobUuid;
     }
 
     /**
@@ -77,12 +77,12 @@ final readonly class JobDispatchService
      */
     public function dispatchMany(
         iterable $jobs,
-        QueueConfiguration $queueConfig,
+        QueueConfiguration $queueConfiguration,
     ): array {
         $jobUuids = [];
 
         foreach ($jobs as $job) {
-            $jobUuids[] = $this->dispatch($job, $queueConfig);
+            $jobUuids[] = $this->dispatch($job, $queueConfiguration);
         }
 
         return $jobUuids;
@@ -119,27 +119,27 @@ final readonly class JobDispatchService
         return Uuid::uuid7()->toString();
     }
 
-    private function applyQueueConfiguration(OrchestratedJob $job, QueueConfiguration $config): void
+    private function applyQueueConfiguration(OrchestratedJob $orchestratedJob, QueueConfiguration $queueConfiguration): void
     {
-        if ($config->hasQueue()) {
-            $job->onQueue($config->queue);
+        if ($queueConfiguration->hasQueue()) {
+            $orchestratedJob->onQueue($queueConfiguration->queue);
         }
 
-        if ($config->hasConnection()) {
-            $job->onConnection($config->connection);
+        if ($queueConfiguration->hasConnection()) {
+            $orchestratedJob->onConnection($queueConfiguration->connection);
         }
 
-        if ($config->hasDelay()) {
-            $job->delay($config->delaySeconds);
+        if ($queueConfiguration->hasDelay()) {
+            $orchestratedJob->delay($queueConfiguration->delaySeconds);
         }
     }
 
-    private function resolveQueueName(OrchestratedJob $job, QueueConfiguration $config): string
+    private function resolveQueueName(OrchestratedJob $orchestratedJob, QueueConfiguration $queueConfiguration): string
     {
-        if ($config->hasQueue() && $config->queue !== null) {
-            return $config->queue;
+        if ($queueConfiguration->hasQueue() && $queueConfiguration->queue !== null) {
+            return $queueConfiguration->queue;
         }
 
-        return $job->queue ?? 'default';
+        return $orchestratedJob->queue ?? 'default';
     }
 }

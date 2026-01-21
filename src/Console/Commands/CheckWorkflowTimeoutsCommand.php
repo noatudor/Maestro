@@ -6,10 +6,14 @@ namespace Maestro\Workflow\Console\Commands;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
+use Maestro\Workflow\Contracts\StepDefinition;
 use Maestro\Workflow\Contracts\StepRunRepository;
 use Maestro\Workflow\Contracts\WorkflowRepository;
+use Maestro\Workflow\Definition\WorkflowDefinition;
 use Maestro\Workflow\Definition\WorkflowDefinitionRegistry;
+use Maestro\Workflow\Domain\StepRun;
 use Maestro\Workflow\Enums\StepState;
+use Maestro\Workflow\Exceptions\InvalidStateTransitionException;
 
 /**
  * Check for timed out steps and workflows and handle them appropriately.
@@ -31,13 +35,13 @@ final class CheckWorkflowTimeoutsCommand extends Command
     public function __construct(
         private readonly WorkflowRepository $workflowRepository,
         private readonly StepRunRepository $stepRunRepository,
-        private readonly WorkflowDefinitionRegistry $definitionRegistry,
+        private readonly WorkflowDefinitionRegistry $workflowDefinitionRegistry,
     ) {
         parent::__construct();
     }
 
     /**
-     * @throws \Maestro\Workflow\Exceptions\InvalidStateTransitionException
+     * @throws InvalidStateTransitionException
      */
     public function handle(): int
     {
@@ -49,32 +53,34 @@ final class CheckWorkflowTimeoutsCommand extends Command
         $runningWorkflows = $this->workflowRepository->findRunning();
         $timedOutCount = 0;
 
-        foreach ($runningWorkflows as $workflow) {
-            $currentStepKey = $workflow->currentStepKey();
+        foreach ($runningWorkflows as $runningWorkflow) {
+            $currentStepKey = $runningWorkflow->currentStepKey();
             if ($currentStepKey === null) {
                 continue;
             }
 
             $stepRun = $this->stepRunRepository->findLatestByWorkflowIdAndStepKey(
-                $workflow->id,
+                $runningWorkflow->id,
                 $currentStepKey,
             );
-
-            if ($stepRun === null || $stepRun->status() !== StepState::Running) {
+            if (! $stepRun instanceof StepRun) {
+                continue;
+            }
+            if ($stepRun->status() !== StepState::Running) {
                 continue;
             }
 
-            $definition = $this->definitionRegistry->find(
-                $workflow->definitionKey,
-                $workflow->definitionVersion,
+            $definition = $this->workflowDefinitionRegistry->find(
+                $runningWorkflow->definitionKey,
+                $runningWorkflow->definitionVersion,
             );
 
-            if ($definition === null) {
+            if (! $definition instanceof WorkflowDefinition) {
                 continue;
             }
 
             $stepDefinition = $definition->getStep($currentStepKey);
-            if ($stepDefinition === null) {
+            if (! $stepDefinition instanceof StepDefinition) {
                 continue;
             }
 
@@ -86,7 +92,7 @@ final class CheckWorkflowTimeoutsCommand extends Command
             }
 
             $startedAt = $stepRun->startedAt();
-            if ($startedAt === null) {
+            if (! $startedAt instanceof CarbonImmutable) {
                 continue;
             }
 
@@ -99,7 +105,7 @@ final class CheckWorkflowTimeoutsCommand extends Command
                     $this->warn(sprintf(
                         'Would mark step run %s (workflow %s, step %s) as timed out',
                         $stepRun->id->value,
-                        $workflow->id->value,
+                        $runningWorkflow->id->value,
                         $currentStepKey->value,
                     ));
                 } else {

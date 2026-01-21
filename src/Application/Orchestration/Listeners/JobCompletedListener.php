@@ -7,6 +7,11 @@ namespace Maestro\Workflow\Application\Orchestration\Listeners;
 use Illuminate\Queue\Events\JobProcessed;
 use Maestro\Workflow\Application\Job\OrchestratedJob;
 use Maestro\Workflow\Application\Orchestration\WorkflowAdvancer;
+use Maestro\Workflow\Exceptions\DefinitionNotFoundException;
+use Maestro\Workflow\Exceptions\InvalidStateTransitionException;
+use Maestro\Workflow\Exceptions\StepDependencyException;
+use Maestro\Workflow\Exceptions\WorkflowLockedException;
+use Maestro\Workflow\Exceptions\WorkflowNotFoundException;
 
 /**
  * Listens for Laravel queue job completion events.
@@ -17,30 +22,30 @@ use Maestro\Workflow\Application\Orchestration\WorkflowAdvancer;
 final readonly class JobCompletedListener
 {
     public function __construct(
-        private WorkflowAdvancer $advancer,
+        private WorkflowAdvancer $workflowAdvancer,
     ) {}
 
     /**
-     * @throws \Maestro\Workflow\Exceptions\WorkflowNotFoundException
-     * @throws \Maestro\Workflow\Exceptions\WorkflowLockedException
-     * @throws \Maestro\Workflow\Exceptions\DefinitionNotFoundException
-     * @throws \Maestro\Workflow\Exceptions\InvalidStateTransitionException
-     * @throws \Maestro\Workflow\Exceptions\StepDependencyException
+     * @throws WorkflowNotFoundException
+     * @throws WorkflowLockedException
+     * @throws DefinitionNotFoundException
+     * @throws InvalidStateTransitionException
+     * @throws StepDependencyException
      */
-    public function handle(JobProcessed $event): void
+    public function handle(JobProcessed $jobProcessed): void
     {
-        $job = $this->extractOrchestratedJob($event);
+        $job = $this->extractOrchestratedJob($jobProcessed);
 
-        if ($job === null) {
+        if (! $job instanceof OrchestratedJob) {
             return;
         }
 
-        $this->advancer->evaluate($job->workflowId);
+        $this->workflowAdvancer->evaluate($job->workflowId);
     }
 
-    private function extractOrchestratedJob(JobProcessed $event): ?OrchestratedJob
+    private function extractOrchestratedJob(JobProcessed $jobProcessed): ?OrchestratedJob
     {
-        $payload = $event->job->payload();
+        $payload = $jobProcessed->job->payload();
 
         if (! isset($payload['data']['command'])) {
             return null;

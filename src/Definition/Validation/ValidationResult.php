@@ -31,9 +31,9 @@ final readonly class ValidationResult
         return new self($errors);
     }
 
-    public static function withError(ValidationError $error): self
+    public static function withError(ValidationError $validationError): self
     {
-        return new self([$error]);
+        return new self([$validationError]);
     }
 
     public function isValid(): bool
@@ -70,7 +70,7 @@ final readonly class ValidationResult
     public function errorMessages(): array
     {
         return array_map(
-            static fn (ValidationError $error): string => $error->message,
+            static fn (ValidationError $validationError): string => $validationError->message,
             $this->errors,
         );
     }
@@ -81,7 +81,7 @@ final readonly class ValidationResult
     public function errorCodes(): array
     {
         return array_map(
-            static fn (ValidationError $error): string => $error->code,
+            static fn (ValidationError $validationError): string => $validationError->code,
             $this->errors,
         );
     }
@@ -91,9 +91,9 @@ final readonly class ValidationResult
         return new self([...$this->errors, ...$other->errors]);
     }
 
-    public function addError(ValidationError $error): self
+    public function addError(ValidationError $validationError): self
     {
-        return new self([...$this->errors, $error]);
+        return new self([...$this->errors, $validationError]);
     }
 
     /**

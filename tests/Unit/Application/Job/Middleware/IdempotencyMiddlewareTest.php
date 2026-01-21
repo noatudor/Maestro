@@ -23,7 +23,7 @@ describe('IdempotencyMiddleware', function (): void {
         $job = new TestOrchestratedJob($this->workflowId, $this->stepRunId, $this->jobUuid);
 
         $executed = false;
-        $this->middleware->handle($job, function () use (&$executed): void {
+        $this->middleware->handle($job, static function () use (&$executed): void {
             $executed = true;
         });
 
@@ -43,7 +43,7 @@ describe('IdempotencyMiddleware', function (): void {
         $this->repository->save($jobRecord);
 
         $executed = false;
-        $this->middleware->handle($job, function () use (&$executed): void {
+        $this->middleware->handle($job, static function () use (&$executed): void {
             $executed = true;
         });
 
@@ -65,7 +65,7 @@ describe('IdempotencyMiddleware', function (): void {
         $this->repository->save($jobRecord);
 
         $executed = false;
-        $this->middleware->handle($job, function () use (&$executed): void {
+        $this->middleware->handle($job, static function () use (&$executed): void {
             $executed = true;
         });
 
@@ -87,7 +87,7 @@ describe('IdempotencyMiddleware', function (): void {
         $this->repository->save($jobRecord);
 
         $executed = false;
-        $this->middleware->handle($job, function () use (&$executed): void {
+        $this->middleware->handle($job, static function () use (&$executed): void {
             $executed = true;
         });
 

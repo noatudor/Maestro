@@ -46,7 +46,11 @@ final readonly class StepTimeout
 
     public function hasAnyTimeout(): bool
     {
-        return $this->hasStepTimeout() || $this->hasJobTimeout();
+        if ($this->hasStepTimeout()) {
+            return true;
+        }
+
+        return $this->hasJobTimeout();
     }
 
     public function withStepTimeout(int $seconds): self

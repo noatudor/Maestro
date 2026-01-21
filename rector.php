@@ -6,7 +6,6 @@ use Rector\CodingStyle\Rector\ArrowFunction\StaticArrowFunctionRector;
 use Rector\CodingStyle\Rector\Closure\StaticClosureRector;
 use Rector\CodingStyle\Rector\Encapsed\EncapsedStringsToSprintfRector;
 use Rector\CodingStyle\Rector\FuncCall\CountArrayToEmptyArrayComparisonRector;
-use Rector\CodingStyle\Rector\PostInc\PostIncDecToPreIncDecRector;
 use Rector\Config\RectorConfig;
 use Rector\Naming\Rector\Assign\RenameVariableToMatchMethodCallReturnTypeRector;
 use Rector\Naming\Rector\Class_\RenamePropertyToMatchTypeRector;
@@ -41,7 +40,6 @@ return RectorConfig::configure()
         StaticClosureRector::class,
         StaticArrowFunctionRector::class,
         CountArrayToEmptyArrayComparisonRector::class,
-        PostIncDecToPreIncDecRector::class,
         EncapsedStringsToSprintfRector::class,
 
         // Naming (not in prepared sets)

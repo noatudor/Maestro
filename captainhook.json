@@ -29,6 +29,18 @@
                 ]
             },
             {
+                "action": "./vendor/bin/sail bin rector process --dry-run --no-progress-bar",
+                "options": {
+                    "label": "Refactoring (Rector)"
+                },
+                "conditions": [
+                    {
+                        "exec": "\\CaptainHook\\App\\Hook\\Condition\\FileStaged\\OfType",
+                        "args": ["php"]
+                    }
+                ]
+            },
+            {
                 "action": "./vendor/bin/sail bin phpstan analyse --no-progress --memory-limit=1G",
                 "options": {
                     "label": "Static Analysis (PHPStan)"

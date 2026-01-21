@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace Maestro\Workflow\Contracts;
 
+use Deprecated;
 use Maestro\Workflow\Domain\WorkflowInstance;
 use Maestro\Workflow\Enums\WorkflowState;
+use Maestro\Workflow\Exceptions\WorkflowLockedException;
+use Maestro\Workflow\Exceptions\WorkflowNotFoundException;
 use Maestro\Workflow\ValueObjects\WorkflowId;
 
 interface WorkflowRepository
 {
     public function find(WorkflowId $workflowId): ?WorkflowInstance;
 
-    public function save(WorkflowInstance $workflow): void;
+    public function save(WorkflowInstance $workflowInstance): void;
 
     public function delete(WorkflowId $workflowId): void;
 
@@ -22,7 +25,7 @@ interface WorkflowRepository
     public function findByState(WorkflowState $workflowState): array;
 
     /**
-     * @throws \Maestro\Workflow\Exceptions\WorkflowNotFoundException
+     * @throws WorkflowNotFoundException
      */
     public function findOrFail(WorkflowId $workflowId): WorkflowInstance;
 
@@ -56,8 +59,8 @@ interface WorkflowRepository
      *
      * @param int $timeoutSeconds Maximum time to wait for lock acquisition
      *
-     * @throws \Maestro\Workflow\Exceptions\WorkflowNotFoundException
-     * @throws \Maestro\Workflow\Exceptions\WorkflowLockedException
+     * @throws WorkflowNotFoundException
+     * @throws WorkflowLockedException
      */
     public function findAndLockForUpdate(WorkflowId $workflowId, int $timeoutSeconds = 5): WorkflowInstance;
 
@@ -92,14 +95,10 @@ interface WorkflowRepository
      */
     public function clearExpiredLocks(int $lockTimeoutSeconds): int;
 
-    /**
-     * @deprecated Use acquireApplicationLock() instead
-     */
+    #[Deprecated(message: 'Use acquireApplicationLock() instead')]
     public function lockForUpdate(WorkflowId $workflowId, string $lockId): bool;
 
-    /**
-     * @deprecated Use releaseApplicationLock() instead
-     */
+    #[Deprecated(message: 'Use releaseApplicationLock() instead')]
     public function releaseLock(WorkflowId $workflowId, string $lockId): bool;
 
     /**
@@ -118,8 +117,8 @@ interface WorkflowRepository
      *
      * @return TReturn
      *
-     * @throws \Maestro\Workflow\Exceptions\WorkflowNotFoundException
-     * @throws \Maestro\Workflow\Exceptions\WorkflowLockedException
+     * @throws WorkflowNotFoundException
+     * @throws WorkflowLockedException
      */
     public function withLockedWorkflow(WorkflowId $workflowId, callable $callback, int $timeoutSeconds = 5): mixed;
 }

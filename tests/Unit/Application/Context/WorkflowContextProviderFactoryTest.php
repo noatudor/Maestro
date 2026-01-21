@@ -19,15 +19,14 @@ describe('WorkflowContextProviderFactory', function (): void {
 
     it('creates a provider for a workflow', function (): void {
         $workflowId = WorkflowId::generate();
-        $definition = WorkflowDefinition::create(
+        $workflowDefinition = WorkflowDefinition::create(
+            displayName: 'Test Workflow',
             key: DefinitionKey::fromString('test-workflow'),
             version: DefinitionVersion::fromString('1.0.0'),
-            displayName: 'Test Workflow',
             steps: StepCollection::empty(),
-            contextLoaderClass: null,
         );
 
-        $provider = $this->factory->forWorkflow($workflowId, $definition);
+        $provider = $this->factory->forWorkflow($workflowId, $workflowDefinition);
 
         expect($provider)->toBeInstanceOf(WorkflowContextProvider::class);
         expect($provider->workflowId()->equals($workflowId))->toBeTrue();
@@ -36,16 +35,15 @@ describe('WorkflowContextProviderFactory', function (): void {
     it('creates distinct providers for different workflows', function (): void {
         $workflowId1 = WorkflowId::generate();
         $workflowId2 = WorkflowId::generate();
-        $definition = WorkflowDefinition::create(
+        $workflowDefinition = WorkflowDefinition::create(
+            displayName: 'Test Workflow',
             key: DefinitionKey::fromString('test-workflow'),
             version: DefinitionVersion::fromString('1.0.0'),
-            displayName: 'Test Workflow',
             steps: StepCollection::empty(),
-            contextLoaderClass: null,
         );
 
-        $provider1 = $this->factory->forWorkflow($workflowId1, $definition);
-        $provider2 = $this->factory->forWorkflow($workflowId2, $definition);
+        $provider1 = $this->factory->forWorkflow($workflowId1, $workflowDefinition);
+        $provider2 = $this->factory->forWorkflow($workflowId2, $workflowDefinition);
 
         expect($provider1)->not->toBe($provider2);
         expect($provider1->workflowId()->equals($workflowId1))->toBeTrue();

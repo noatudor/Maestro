@@ -18,82 +18,82 @@ describe('JobRecordCollection', static function (): void {
     });
 
     afterEach(function (): void {
-        CarbonImmutable::setTestNow(null);
+        CarbonImmutable::setTestNow();
     });
 
     it('creates an empty collection', function (): void {
-        $collection = JobRecordCollection::empty();
+        $jobRecordCollection = JobRecordCollection::empty();
 
-        expect($collection->isEmpty())->toBeTrue()
-            ->and($collection->count())->toBe(0);
+        expect($jobRecordCollection->isEmpty())->toBeTrue()
+            ->and($jobRecordCollection->count())->toBe(0);
     });
 
     it('creates from array', function (): void {
-        $job1 = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
         $job2 = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-2', 'App\\Job', 'default');
 
-        $collection = JobRecordCollection::fromArray([$job1, $job2]);
+        $jobRecordCollection = JobRecordCollection::fromArray([$jobRecord, $job2]);
 
-        expect($collection->count())->toBe(2)
-            ->and($collection->isNotEmpty())->toBeTrue();
+        expect($jobRecordCollection->count())->toBe(2)
+            ->and($jobRecordCollection->isNotEmpty())->toBeTrue();
     });
 
     it('adds a job record', function (): void {
-        $job1 = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
         $job2 = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-2', 'App\\Job', 'default');
 
-        $collection = JobRecordCollection::empty()->add($job1)->add($job2);
+        $jobRecordCollection = JobRecordCollection::empty()->add($jobRecord)->add($job2);
 
-        expect($collection->count())->toBe(2);
+        expect($jobRecordCollection->count())->toBe(2);
     });
 
     it('filters by dispatched state', function (): void {
-        $dispatched = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
         $running = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-2', 'App\\Job', 'default');
         $running->start();
 
-        $collection = new JobRecordCollection([$dispatched, $running]);
+        $collection = new JobRecordCollection([$jobRecord, $running]);
 
         expect($collection->dispatched()->count())->toBe(1);
     });
 
     it('filters by running state', function (): void {
-        $dispatched = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
         $running = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-2', 'App\\Job', 'default');
         $running->start();
 
-        $collection = new JobRecordCollection([$dispatched, $running]);
+        $collection = new JobRecordCollection([$jobRecord, $running]);
 
         expect($collection->running()->count())->toBe(1);
     });
 
     it('filters by succeeded state', function (): void {
-        $running = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
-        $running->start();
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord->start();
         $succeeded = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-2', 'App\\Job', 'default');
         $succeeded->start();
         $succeeded->succeed();
 
-        $collection = new JobRecordCollection([$running, $succeeded]);
+        $collection = new JobRecordCollection([$jobRecord, $succeeded]);
 
         expect($collection->succeeded()->count())->toBe(1);
     });
 
     it('filters by failed state', function (): void {
-        $running = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
-        $running->start();
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord->start();
         $failed = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-2', 'App\\Job', 'default');
         $failed->start();
         $failed->fail();
 
-        $collection = new JobRecordCollection([$running, $failed]);
+        $collection = new JobRecordCollection([$jobRecord, $failed]);
 
         expect($collection->failed()->count())->toBe(1);
     });
 
     it('filters by terminal state', function (): void {
-        $running = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
-        $running->start();
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord->start();
         $succeeded = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-2', 'App\\Job', 'default');
         $succeeded->start();
         $succeeded->succeed();
@@ -101,17 +101,17 @@ describe('JobRecordCollection', static function (): void {
         $failed->start();
         $failed->fail();
 
-        $collection = new JobRecordCollection([$running, $succeeded, $failed]);
+        $collection = new JobRecordCollection([$jobRecord, $succeeded, $failed]);
 
         expect($collection->terminal()->count())->toBe(2);
     });
 
     it('filters by specific state', function (): void {
-        $dispatched = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
         $running = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-2', 'App\\Job', 'default');
         $running->start();
 
-        $collection = new JobRecordCollection([$dispatched, $running]);
+        $collection = new JobRecordCollection([$jobRecord, $running]);
 
         expect($collection->byState(JobState::Dispatched)->count())->toBe(1)
             ->and($collection->byState(JobState::Running)->count())->toBe(1);
@@ -119,19 +119,19 @@ describe('JobRecordCollection', static function (): void {
 
     it('filters by step run id', function (): void {
         $stepRunId2 = StepRunId::generate();
-        $job1 = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
         $job2 = JobRecord::create($this->workflowId, $stepRunId2, 'uuid-2', 'App\\Job', 'default');
 
-        $collection = new JobRecordCollection([$job1, $job2]);
+        $collection = new JobRecordCollection([$jobRecord, $job2]);
 
         expect($collection->forStepRun($this->stepRunId)->count())->toBe(1);
     });
 
     it('finds by job uuid', function (): void {
-        $job1 = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
         $job2 = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-2', 'App\\Job', 'default');
 
-        $collection = new JobRecordCollection([$job1, $job2]);
+        $collection = new JobRecordCollection([$jobRecord, $job2]);
 
         $found = $collection->findByJobUuid('uuid-2');
 
@@ -139,9 +139,9 @@ describe('JobRecordCollection', static function (): void {
     });
 
     it('returns null when job uuid not found', function (): void {
-        $job1 = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
 
-        $collection = new JobRecordCollection([$job1]);
+        $collection = new JobRecordCollection([$jobRecord]);
 
         $found = $collection->findByJobUuid('nonexistent');
 
@@ -149,18 +149,18 @@ describe('JobRecordCollection', static function (): void {
     });
 
     it('filters by queue', function (): void {
-        $defaultQueue = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
         $highQueue = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-2', 'App\\Job', 'high');
 
-        $collection = new JobRecordCollection([$defaultQueue, $highQueue]);
+        $collection = new JobRecordCollection([$jobRecord, $highQueue]);
 
         expect($collection->findByQueue('high')->count())->toBe(1);
     });
 
     it('counts succeeded jobs', function (): void {
-        $succeeded1 = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
-        $succeeded1->start();
-        $succeeded1->succeed();
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord->start();
+        $jobRecord->succeed();
         $succeeded2 = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-2', 'App\\Job', 'default');
         $succeeded2->start();
         $succeeded2->succeed();
@@ -168,15 +168,15 @@ describe('JobRecordCollection', static function (): void {
         $failed->start();
         $failed->fail();
 
-        $collection = new JobRecordCollection([$succeeded1, $succeeded2, $failed]);
+        $collection = new JobRecordCollection([$jobRecord, $succeeded2, $failed]);
 
         expect($collection->succeededCount())->toBe(2);
     });
 
     it('counts failed jobs', function (): void {
-        $succeeded = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
-        $succeeded->start();
-        $succeeded->succeed();
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord->start();
+        $jobRecord->succeed();
         $failed1 = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-2', 'App\\Job', 'default');
         $failed1->start();
         $failed1->fail();
@@ -184,14 +184,14 @@ describe('JobRecordCollection', static function (): void {
         $failed2->start();
         $failed2->fail();
 
-        $collection = new JobRecordCollection([$succeeded, $failed1, $failed2]);
+        $collection = new JobRecordCollection([$jobRecord, $failed1, $failed2]);
 
         expect($collection->failedCount())->toBe(2);
     });
 
     it('counts terminal jobs', function (): void {
-        $running = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
-        $running->start();
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord->start();
         $succeeded = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-2', 'App\\Job', 'default');
         $succeeded->start();
         $succeeded->succeed();
@@ -199,108 +199,108 @@ describe('JobRecordCollection', static function (): void {
         $failed->start();
         $failed->fail();
 
-        $collection = new JobRecordCollection([$running, $succeeded, $failed]);
+        $collection = new JobRecordCollection([$jobRecord, $succeeded, $failed]);
 
         expect($collection->terminalCount())->toBe(2);
     });
 
     it('counts in-progress jobs', function (): void {
-        $dispatched = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
         $running = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-2', 'App\\Job', 'default');
         $running->start();
         $succeeded = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-3', 'App\\Job', 'default');
         $succeeded->start();
         $succeeded->succeed();
 
-        $collection = new JobRecordCollection([$dispatched, $running, $succeeded]);
+        $collection = new JobRecordCollection([$jobRecord, $running, $succeeded]);
 
         expect($collection->inProgressCount())->toBe(2);
     });
 
     it('calculates total runtime', function (): void {
-        $job1 = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
-        $job1->start();
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord->start();
         CarbonImmutable::setTestNow(CarbonImmutable::now()->addMilliseconds(100));
-        $job1->succeed();
+        $jobRecord->succeed();
 
         $job2 = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-2', 'App\\Job', 'default');
         $job2->start();
         CarbonImmutable::setTestNow(CarbonImmutable::now()->addMilliseconds(200));
         $job2->succeed();
 
-        $collection = new JobRecordCollection([$job1, $job2]);
+        $collection = new JobRecordCollection([$jobRecord, $job2]);
 
         expect($collection->totalRuntimeMs())->toBe(300);
     });
 
     it('calculates average runtime', function (): void {
-        $job1 = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
-        $job1->start();
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord->start();
         CarbonImmutable::setTestNow(CarbonImmutable::now()->addMilliseconds(100));
-        $job1->succeed();
+        $jobRecord->succeed();
 
         $job2 = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-2', 'App\\Job', 'default');
         $job2->start();
         CarbonImmutable::setTestNow(CarbonImmutable::now()->addMilliseconds(200));
         $job2->succeed();
 
-        $collection = new JobRecordCollection([$job1, $job2]);
+        $collection = new JobRecordCollection([$jobRecord, $job2]);
 
         expect($collection->averageRuntimeMs())->toBe(150.0);
     });
 
     it('returns zero average for empty collection', function (): void {
-        $collection = JobRecordCollection::empty();
+        $jobRecordCollection = JobRecordCollection::empty();
 
-        expect($collection->averageRuntimeMs())->toBe(0.0);
+        expect($jobRecordCollection->averageRuntimeMs())->toBe(0.0);
     });
 
     it('checks if any have failed', function (): void {
-        $succeeded = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
-        $succeeded->start();
-        $succeeded->succeed();
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord->start();
+        $jobRecord->succeed();
         $failed = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-2', 'App\\Job', 'default');
         $failed->start();
         $failed->fail();
 
-        $collection = new JobRecordCollection([$succeeded, $failed]);
+        $collection = new JobRecordCollection([$jobRecord, $failed]);
 
         expect($collection->hasAnyFailed())->toBeTrue();
     });
 
     it('checks if all succeeded', function (): void {
-        $succeeded1 = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
-        $succeeded1->start();
-        $succeeded1->succeed();
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord->start();
+        $jobRecord->succeed();
         $succeeded2 = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-2', 'App\\Job', 'default');
         $succeeded2->start();
         $succeeded2->succeed();
 
-        $collection = new JobRecordCollection([$succeeded1, $succeeded2]);
+        $collection = new JobRecordCollection([$jobRecord, $succeeded2]);
 
         expect($collection->areAllSucceeded())->toBeTrue();
     });
 
     it('checks if all are terminal', function (): void {
-        $succeeded = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
-        $succeeded->start();
-        $succeeded->succeed();
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord->start();
+        $jobRecord->succeed();
         $failed = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-2', 'App\\Job', 'default');
         $failed->start();
         $failed->fail();
 
-        $collection = new JobRecordCollection([$succeeded, $failed]);
+        $collection = new JobRecordCollection([$jobRecord, $failed]);
 
         expect($collection->areAllTerminal())->toBeTrue()
             ->and($collection->areAllCompleted())->toBeTrue();
     });
 
     it('counts by queue', function (): void {
-        $default1 = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
         $default2 = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-2', 'App\\Job', 'default');
         $high = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-3', 'App\\Job', 'high');
 
-        $collection = new JobRecordCollection([$default1, $default2, $high]);
+        $collection = new JobRecordCollection([$jobRecord, $default2, $high]);
 
         $counts = $collection->countByQueue();
 
@@ -308,14 +308,14 @@ describe('JobRecordCollection', static function (): void {
     });
 
     it('counts by status', function (): void {
-        $dispatched = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
         $running = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-2', 'App\\Job', 'default');
         $running->start();
         $succeeded = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-3', 'App\\Job', 'default');
         $succeeded->start();
         $succeeded->succeed();
 
-        $collection = new JobRecordCollection([$dispatched, $running, $succeeded]);
+        $collection = new JobRecordCollection([$jobRecord, $running, $succeeded]);
 
         $counts = $collection->countByStatus();
 
@@ -323,10 +323,10 @@ describe('JobRecordCollection', static function (): void {
     });
 
     it('is iterable', function (): void {
-        $job1 = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
+        $jobRecord = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-1', 'App\\Job', 'default');
         $job2 = JobRecord::create($this->workflowId, $this->stepRunId, 'uuid-2', 'App\\Job', 'default');
 
-        $collection = new JobRecordCollection([$job1, $job2]);
+        $collection = new JobRecordCollection([$jobRecord, $job2]);
 
         $items = [];
         foreach ($collection as $item) {
