@@ -1,175 +1,33 @@
 parameters:
-	ignoreErrors:
-		-
-			message: "#^Called 'env' outside of the config directory which returns null when the config is cached, use 'config'\\.$#"
-			identifier: larastan.noEnvCallsOutsideOfConfig
-			count: 12
-			path: config/maestro.php
+    ignoreErrors:
+        # Larastan false positive: env() IS in config directory (this is a package config file)
+        - identifier: larastan.noEnvCallsOutsideOfConfig
+          path: config/maestro.php
 
-		-
-			message: '#^Dynamic call to static method Maestro\\Workflow\\Infrastructure\\Persistence\\QueryBuilders\\JobLedgerQueryBuilder\:\:whereBetween\(\)\.$#'
-			identifier: staticMethod.dynamicCall
-			count: 1
-			path: src/Infrastructure/Persistence/QueryBuilders/JobLedgerQueryBuilder.php
+        # Laravel query builder fluent API returns $this from static methods - unavoidable pattern
+        - identifier: staticMethod.dynamicCall
+          paths:
+              - src/Infrastructure/Persistence/QueryBuilders/*
+              - src/Infrastructure/Persistence/Repositories/*
 
-		-
-			message: '#^Dynamic call to static method Maestro\\Workflow\\Infrastructure\\Persistence\\QueryBuilders\\JobLedgerQueryBuilder\:\:whereIn\(\)\.$#'
-			identifier: staticMethod.dynamicCall
-			count: 2
-			path: src/Infrastructure/Persistence/QueryBuilders/JobLedgerQueryBuilder.php
+        # Runtime database exceptions that static analysis cannot see
+        -
+            message: '#^Dead catch \- Illuminate\\Database\\QueryException is never thrown in the try block\.$#'
+            identifier: catch.neverThrown
+            path: src/Infrastructure/Persistence/Repositories/EloquentWorkflowRepository.php
 
-		-
-			message: '#^Dynamic call to static method Maestro\\Workflow\\Infrastructure\\Persistence\\QueryBuilders\\StepRunQueryBuilder\:\:orderByDesc\(\)\.$#'
-			identifier: staticMethod.dynamicCall
-			count: 1
-			path: src/Infrastructure/Persistence/QueryBuilders/StepRunQueryBuilder.php
+        -
+            message: '#^Method Maestro\\Workflow\\Infrastructure\\Persistence\\Repositories\\EloquentWorkflowRepository\:\:findAndLockForUpdate\(\) has Maestro\\Workflow\\Exceptions\\WorkflowLockedException in PHPDoc @throws tag but it''s not thrown\.$#'
+            identifier: throws.unusedType
+            path: src/Infrastructure/Persistence/Repositories/EloquentWorkflowRepository.php
 
-		-
-			message: '#^Dynamic call to static method Maestro\\Workflow\\Infrastructure\\Persistence\\QueryBuilders\\StepRunQueryBuilder\:\:whereIn\(\)\.$#'
-			identifier: staticMethod.dynamicCall
-			count: 1
-			path: src/Infrastructure/Persistence/QueryBuilders/StepRunQueryBuilder.php
+        -
+            message: '#^Method Maestro\\Workflow\\Infrastructure\\Persistence\\Repositories\\EloquentWorkflowRepository\:\:isLockTimeoutException\(\) is unused\.$#'
+            identifier: method.unused
+            path: src/Infrastructure/Persistence/Repositories/EloquentWorkflowRepository.php
 
-		-
-			message: '#^Dynamic call to static method Maestro\\Workflow\\Infrastructure\\Persistence\\QueryBuilders\\StepRunQueryBuilder\:\:whereRaw\(\)\.$#'
-			identifier: staticMethod.dynamicCall
-			count: 1
-			path: src/Infrastructure/Persistence/QueryBuilders/StepRunQueryBuilder.php
-
-		-
-			message: '#^Dynamic call to static method Maestro\\Workflow\\Infrastructure\\Persistence\\QueryBuilders\\WorkflowQueryBuilder\:\:whereBetween\(\)\.$#'
-			identifier: staticMethod.dynamicCall
-			count: 1
-			path: src/Infrastructure/Persistence/QueryBuilders/WorkflowQueryBuilder.php
-
-		-
-			message: '#^Dynamic call to static method Maestro\\Workflow\\Infrastructure\\Persistence\\QueryBuilders\\WorkflowQueryBuilder\:\:whereIn\(\)\.$#'
-			identifier: staticMethod.dynamicCall
-			count: 2
-			path: src/Infrastructure/Persistence/QueryBuilders/WorkflowQueryBuilder.php
-
-		-
-			message: '#^Dynamic call to static method Maestro\\Workflow\\Infrastructure\\Persistence\\QueryBuilders\\WorkflowQueryBuilder\:\:whereNotNull\(\)\.$#'
-			identifier: staticMethod.dynamicCall
-			count: 1
-			path: src/Infrastructure/Persistence/QueryBuilders/WorkflowQueryBuilder.php
-
-		-
-			message: '#^Dynamic call to static method Maestro\\Workflow\\Infrastructure\\Persistence\\QueryBuilders\\WorkflowQueryBuilder\:\:whereNull\(\)\.$#'
-			identifier: staticMethod.dynamicCall
-			count: 1
-			path: src/Infrastructure/Persistence/QueryBuilders/WorkflowQueryBuilder.php
-
-		-
-			message: '#^Dynamic call to static method Maestro\\Workflow\\Infrastructure\\Persistence\\QueryBuilders\\JobLedgerQueryBuilder\:\:count\(\)\.$#'
-			identifier: staticMethod.dynamicCall
-			count: 3
-			path: src/Infrastructure/Persistence/Repositories/EloquentJobLedgerRepository.php
-
-		-
-			message: '#^Dynamic call to static method Maestro\\Workflow\\Infrastructure\\Persistence\\QueryBuilders\\JobLedgerQueryBuilder\:\:exists\(\)\.$#'
-			identifier: staticMethod.dynamicCall
-			count: 2
-			path: src/Infrastructure/Persistence/Repositories/EloquentJobLedgerRepository.php
-
-		-
-			message: '#^Dynamic call to static method Maestro\\Workflow\\Infrastructure\\Persistence\\QueryBuilders\\JobLedgerQueryBuilder\:\:orderBy\(\)\.$#'
-			identifier: staticMethod.dynamicCall
-			count: 2
-			path: src/Infrastructure/Persistence/Repositories/EloquentJobLedgerRepository.php
-
-		-
-			message: '#^Dynamic call to static method Illuminate\\Database\\Eloquent\\Builder\<Maestro\\Workflow\\Infrastructure\\Persistence\\Models\\StepOutputModel\>\:\:exists\(\)\.$#'
-			identifier: staticMethod.dynamicCall
-			count: 1
-			path: src/Infrastructure/Persistence/Repositories/EloquentStepOutputRepository.php
-
-		-
-			message: '#^Dynamic call to static method Maestro\\Workflow\\Infrastructure\\Persistence\\QueryBuilders\\StepRunQueryBuilder\:\:count\(\)\.$#'
-			identifier: staticMethod.dynamicCall
-			count: 1
-			path: src/Infrastructure/Persistence/Repositories/EloquentStepRunRepository.php
-
-		-
-			message: '#^Dynamic call to static method Maestro\\Workflow\\Infrastructure\\Persistence\\QueryBuilders\\StepRunQueryBuilder\:\:exists\(\)\.$#'
-			identifier: staticMethod.dynamicCall
-			count: 1
-			path: src/Infrastructure/Persistence/Repositories/EloquentStepRunRepository.php
-
-		-
-			message: '#^Dynamic call to static method Maestro\\Workflow\\Infrastructure\\Persistence\\QueryBuilders\\StepRunQueryBuilder\:\:max\(\)\.$#'
-			identifier: staticMethod.dynamicCall
-			count: 1
-			path: src/Infrastructure/Persistence/Repositories/EloquentStepRunRepository.php
-
-		-
-			message: '#^Dynamic call to static method Maestro\\Workflow\\Infrastructure\\Persistence\\QueryBuilders\\StepRunQueryBuilder\:\:orderBy\(\)\.$#'
-			identifier: staticMethod.dynamicCall
-			count: 1
-			path: src/Infrastructure/Persistence/Repositories/EloquentStepRunRepository.php
-
-		-
-			message: '#^Dynamic call to static method Maestro\\Workflow\\Infrastructure\\Persistence\\QueryBuilders\\WorkflowQueryBuilder\:\:exists\(\)\.$#'
-			identifier: staticMethod.dynamicCall
-			count: 1
-			path: src/Infrastructure/Persistence/Repositories/EloquentWorkflowRepository.php
-
-		-
-			message: '#^Dynamic call to static method Maestro\\Workflow\\Infrastructure\\Persistence\\QueryBuilders\\WorkflowQueryBuilder\:\:whereNull\(\)\.$#'
-			identifier: staticMethod.dynamicCall
-			count: 1
-			path: src/Infrastructure/Persistence/Repositories/EloquentWorkflowRepository.php
-
-		-
-			message: '#^Dynamic call to static method Maestro\\Workflow\\Infrastructure\\Persistence\\QueryBuilders\\WorkflowQueryBuilder\:\:lockForUpdate\(\)\.$#'
-			identifier: staticMethod.dynamicCall
-			count: 1
-			path: src/Infrastructure/Persistence/Repositories/EloquentWorkflowRepository.php
-
-		-
-			message: '#^Dynamic call to static method Illuminate\\Database\\Eloquent\\Builder\<Maestro\\Workflow\\Infrastructure\\Persistence\\Models\\StepOutputModel\>\:\:lockForUpdate\(\)\.$#'
-			identifier: staticMethod.dynamicCall
-			count: 1
-			path: src/Infrastructure/Persistence/Repositories/EloquentStepOutputRepository.php
-
-		-
-			message: '#^Dynamic call to static method Maestro\\Workflow\\Infrastructure\\Persistence\\QueryBuilders\\WorkflowQueryBuilder\:\:whereNotNull\(\)\.$#'
-			identifier: staticMethod.dynamicCall
-			count: 1
-			path: src/Infrastructure/Persistence/Repositories/EloquentWorkflowRepository.php
-
-		-
-			message: '#^Method Maestro\\Workflow\\Infrastructure\\Persistence\\Repositories\\EloquentWorkflowRepository\:\:findAndLockForUpdate\(\) has Maestro\\Workflow\\Exceptions\\WorkflowLockedException in PHPDoc @throws tag but it''s not thrown\.$#'
-			identifier: throws.unusedType
-			count: 1
-			path: src/Infrastructure/Persistence/Repositories/EloquentWorkflowRepository.php
-
-		-
-			message: '#^Dead catch \- Illuminate\\Database\\QueryException is never thrown in the try block\.$#'
-			identifier: catch.neverThrown
-			count: 1
-			path: src/Infrastructure/Persistence/Repositories/EloquentWorkflowRepository.php
-
-		-
-			message: '#^Method Maestro\\Workflow\\Infrastructure\\Persistence\\Repositories\\EloquentWorkflowRepository\:\:isLockTimeoutException\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: src/Infrastructure/Persistence/Repositories/EloquentWorkflowRepository.php
-
-		-
-			message: '#^Method Maestro\\Workflow\\Application\\Orchestration\\WorkflowAdvancer\:\:evaluate\(\) has Maestro\\Workflow\\Exceptions\\DefinitionNotFoundException in PHPDoc @throws tag but it''s not thrown\.$#'
-			identifier: throws.unusedType
-			count: 1
-			path: src/Application/Orchestration/WorkflowAdvancer.php
-
-		-
-			message: '#^Method Maestro\\Workflow\\Application\\Orchestration\\WorkflowAdvancer\:\:evaluate\(\) has Maestro\\Workflow\\Exceptions\\InvalidStateTransitionException in PHPDoc @throws tag but it''s not thrown\.$#'
-			identifier: throws.unusedType
-			count: 1
-			path: src/Application/Orchestration/WorkflowAdvancer.php
-
-		-
-			message: '#^Method Maestro\\Workflow\\Application\\Orchestration\\WorkflowAdvancer\:\:evaluate\(\) has Maestro\\Workflow\\Exceptions\\StepDependencyException in PHPDoc @throws tag but it''s not thrown\.$#'
-			identifier: throws.unusedType
-			count: 1
-			path: src/Application/Orchestration/WorkflowAdvancer.php
+        # @throws tags documenting exceptions propagated from called methods
+        -
+            message: '#^Method Maestro\\Workflow\\Application\\Orchestration\\WorkflowAdvancer\:\:evaluate\(\) has .+ in PHPDoc @throws tag but it''s not thrown\.$#'
+            identifier: throws.unusedType
+            path: src/Application/Orchestration/WorkflowAdvancer.php

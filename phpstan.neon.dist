@@ -2,16 +2,36 @@ includes:
     - phpstan-baseline.neon
 
 parameters:
-    level: 5
+    level: 9
+
     paths:
         - src
         - config
+
     tmpDir: build/phpstan
+
     checkOctaneCompatibility: true
     checkModelProperties: true
+    reportUnmatchedIgnoredErrors: true
+    treatPhpDocTypesAsCertain: false
 
-    ignoreErrors:
-        # False positive: env() IS in config directory (package config files)
-        -
-            identifier: larastan.noEnvCallsOutsideOfConfig
-            path: config/*
+    exceptions:
+        check:
+            missingCheckedExceptionInThrows: true
+            tooWideThrowType: true
+        implicitThrows: false
+        checkedExceptionClasses:
+            - Maestro\Workflow\Exceptions\MaestroException
+
+    strictRules:
+        disallowedLooseComparison: true
+        booleansInConditions: true
+        uselessCast: true
+        requireParentConstructorCall: true
+        overwriteVariablesWithLoop: true
+        closureUsesThis: true
+        matchingInheritedMethodNames: true
+        numericOperandsInArithmeticOperators: true
+        switchConditionsMatchingType: true
+
+    ignoreErrors: []
