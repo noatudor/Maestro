@@ -15,6 +15,7 @@ use Maestro\Workflow\ValueObjects\DefinitionVersion;
 final class WorkflowDefinitionBuilder
 {
     private DefinitionVersion $version;
+
     private string $displayName;
 
     /** @var list<StepDefinition> */
@@ -30,11 +31,17 @@ final class WorkflowDefinitionBuilder
         $this->displayName = $key->toString();
     }
 
+    /**
+     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionKeyException
+     */
     public static function create(string $key): self
     {
         return new self(DefinitionKey::fromString($key));
     }
 
+    /**
+     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionVersionException
+     */
     public function version(string $version): self
     {
         $this->version = DefinitionVersion::fromString($version);
@@ -70,6 +77,8 @@ final class WorkflowDefinitionBuilder
      * Add a single job step using a fluent builder.
      *
      * @param Closure(SingleJobStepBuilder): SingleJobStepBuilder $configure
+     *
+     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
      */
     public function singleJob(string $key, Closure $configure): self
     {
@@ -84,6 +93,8 @@ final class WorkflowDefinitionBuilder
      * Add a fan-out step using a fluent builder.
      *
      * @param Closure(FanOutStepBuilder): FanOutStepBuilder $configure
+     *
+     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
      */
     public function fanOut(string $key, Closure $configure): self
     {

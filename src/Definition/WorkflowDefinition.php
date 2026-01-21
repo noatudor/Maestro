@@ -176,6 +176,6 @@ final readonly class WorkflowDefinition
      */
     public function identifier(): string
     {
-        return $this->key->toString() . ':' . $this->version->toString();
+        return $this->key->toString().':'.$this->version->toString();
     }
 }

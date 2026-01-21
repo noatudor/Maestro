@@ -51,7 +51,7 @@ final class WorkflowDefinitionRegistry
      */
     public function get(DefinitionKey $key, DefinitionVersion $version): WorkflowDefinition
     {
-        $identifier = $key->toString() . ':' . $version->toString();
+        $identifier = $key->toString().':'.$version->toString();
 
         if (! isset($this->definitions[$identifier])) {
             throw DefinitionNotFoundException::withKeyAndVersion($key, $version);
@@ -62,7 +62,7 @@ final class WorkflowDefinitionRegistry
 
     public function find(DefinitionKey $key, DefinitionVersion $version): ?WorkflowDefinition
     {
-        $identifier = $key->toString() . ':' . $version->toString();
+        $identifier = $key->toString().':'.$version->toString();
 
         return $this->definitions[$identifier] ?? null;
     }
@@ -98,7 +98,7 @@ final class WorkflowDefinitionRegistry
             return isset($this->latestVersions[$key->toString()]);
         }
 
-        $identifier = $key->toString() . ':' . $version->toString();
+        $identifier = $key->toString().':'.$version->toString();
 
         return isset($this->definitions[$identifier]);
     }
@@ -119,20 +119,20 @@ final class WorkflowDefinitionRegistry
         $versions = [];
 
         foreach ($this->definitions as $identifier => $definition) {
-            if (str_starts_with($identifier, $keyString . ':')) {
+            if (str_starts_with($identifier, $keyString.':')) {
                 $versions[] = $definition;
             }
         }
 
-        usort($versions, static function (WorkflowDefinition $a, WorkflowDefinition $b): int {
-            return $a->version()->isNewerThan($b->version()) ? -1 : 1;
-        });
+        usort($versions, static fn (WorkflowDefinition $a, WorkflowDefinition $b): int => $a->version()->isNewerThan($b->version()) ? -1 : 1);
 
         return $versions;
     }
 
     /**
      * @return list<DefinitionKey>
+     *
+     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionKeyException
      */
     public function allKeys(): array
     {
@@ -144,6 +144,9 @@ final class WorkflowDefinitionRegistry
 
     /**
      * @return list<WorkflowDefinition>
+     *
+     * @throws DefinitionNotFoundException
+     * @throws \Maestro\Workflow\Exceptions\InvalidDefinitionKeyException
      */
     public function allLatest(): array
     {

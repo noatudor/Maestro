@@ -20,6 +20,7 @@ return new class extends Migration
             $table->timestamp('finished_at')->nullable();
             $table->string('failure_code', 100)->nullable();
             $table->text('failure_message')->nullable();
+            $table->unsignedInteger('completed_job_count')->default(0);
             $table->unsignedInteger('failed_job_count')->default(0);
             $table->unsignedInteger('total_job_count')->default(0);
             $table->timestamps();

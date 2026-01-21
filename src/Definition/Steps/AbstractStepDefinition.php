@@ -29,52 +29,52 @@ abstract readonly class AbstractStepDefinition implements StepDefinition
         private QueueConfiguration $queueConfiguration,
     ) {}
 
-    public function key(): StepKey
+    final public function key(): StepKey
     {
         return $this->key;
     }
 
-    public function displayName(): string
+    final public function displayName(): string
     {
         return $this->displayName;
     }
 
-    public function requires(): array
+    final public function requires(): array
     {
         return $this->requires;
     }
 
-    public function produces(): ?string
+    final public function produces(): ?string
     {
         return $this->produces;
     }
 
-    public function failurePolicy(): FailurePolicy
+    final public function failurePolicy(): FailurePolicy
     {
         return $this->failurePolicy;
     }
 
-    public function retryConfiguration(): RetryConfiguration
+    final public function retryConfiguration(): RetryConfiguration
     {
         return $this->retryConfiguration;
     }
 
-    public function timeout(): StepTimeout
+    final public function timeout(): StepTimeout
     {
         return $this->timeout;
     }
 
-    public function queueConfiguration(): QueueConfiguration
+    final public function queueConfiguration(): QueueConfiguration
     {
         return $this->queueConfiguration;
     }
 
-    public function hasRequirements(): bool
+    final public function hasRequirements(): bool
     {
         return $this->requires !== [];
     }
 
-    public function producesOutput(): bool
+    final public function producesOutput(): bool
     {
         return $this->produces !== null;
     }

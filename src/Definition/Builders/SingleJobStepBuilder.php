@@ -27,8 +27,11 @@ final class SingleJobStepBuilder
     private ?string $produces = null;
 
     private FailurePolicy $failurePolicy = FailurePolicy::FailWorkflow;
+
     private ?RetryConfiguration $retryConfiguration = null;
+
     private ?StepTimeout $timeout = null;
+
     private ?QueueConfiguration $queueConfiguration = null;
 
     private function __construct(
@@ -37,6 +40,9 @@ final class SingleJobStepBuilder
         $this->displayName = $key->toString();
     }
 
+    /**
+     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     */
     public static function create(string $key): self
     {
         return new self(StepKey::fromString($key));

@@ -24,8 +24,11 @@ final class FanOutStepBuilder
     private string $jobClass;
 
     private Closure $itemIteratorFactory;
+
     private ?Closure $jobArgumentsFactory = null;
+
     private ?int $parallelismLimit = null;
+
     private SuccessCriteria|NOfMCriteria $successCriteria = SuccessCriteria::All;
 
     /** @var list<class-string<StepOutput>> */
@@ -35,8 +38,11 @@ final class FanOutStepBuilder
     private ?string $produces = null;
 
     private FailurePolicy $failurePolicy = FailurePolicy::FailWorkflow;
+
     private ?RetryConfiguration $retryConfiguration = null;
+
     private ?StepTimeout $timeout = null;
+
     private ?QueueConfiguration $queueConfiguration = null;
 
     private function __construct(
@@ -45,6 +51,9 @@ final class FanOutStepBuilder
         $this->displayName = $key->toString();
     }
 
+    /**
+     * @throws \Maestro\Workflow\Exceptions\InvalidStepKeyException
+     */
     public static function create(string $key): self
     {
         return new self(StepKey::fromString($key));

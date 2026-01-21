@@ -24,6 +24,7 @@ final class StepRun
         private ?CarbonImmutable $finishedAt,
         private ?string $failureCode,
         private ?string $failureMessage,
+        private int $completedJobCount,
         private int $failedJobCount,
         private int $totalJobCount,
         private CarbonImmutable $updatedAt,
@@ -49,6 +50,7 @@ final class StepRun
             finishedAt: null,
             failureCode: null,
             failureMessage: null,
+            completedJobCount: 0,
             failedJobCount: 0,
             totalJobCount: $totalJobCount,
             updatedAt: $now,
@@ -65,6 +67,7 @@ final class StepRun
         ?CarbonImmutable $finishedAt,
         ?string $failureCode,
         ?string $failureMessage,
+        int $completedJobCount,
         int $failedJobCount,
         int $totalJobCount,
         CarbonImmutable $createdAt,
@@ -81,6 +84,7 @@ final class StepRun
             finishedAt: $finishedAt,
             failureCode: $failureCode,
             failureMessage: $failureMessage,
+            completedJobCount: $completedJobCount,
             failedJobCount: $failedJobCount,
             totalJobCount: $totalJobCount,
             updatedAt: $updatedAt,
@@ -129,7 +133,7 @@ final class StepRun
 
     public function succeededJobCount(): int
     {
-        return $this->totalJobCount - $this->failedJobCount;
+        return $this->completedJobCount - $this->failedJobCount;
     }
 
     public function isPending(): bool
@@ -164,7 +168,7 @@ final class StepRun
 
     public function completedJobCount(): int
     {
-        return $this->succeededJobCount() + $this->failedJobCount;
+        return $this->completedJobCount;
     }
 
     /**
@@ -207,17 +211,20 @@ final class StepRun
 
     public function incrementFailedJobCount(): void
     {
+        $this->completedJobCount++;
         $this->failedJobCount++;
         $this->touch();
     }
 
     public function recordJobSuccess(): void
     {
+        $this->completedJobCount++;
         $this->touch();
     }
 
     public function recordJobFailure(): void
     {
+        $this->completedJobCount++;
         $this->failedJobCount++;
         $this->touch();
     }

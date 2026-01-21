@@ -10,6 +10,7 @@ use Maestro\Workflow\Domain\WorkflowInstance;
 use Maestro\Workflow\Exceptions\DefinitionNotFoundException;
 use Maestro\Workflow\Exceptions\InvalidStateTransitionException;
 use Maestro\Workflow\Exceptions\WorkflowAlreadyCancelledException;
+use Maestro\Workflow\Exceptions\WorkflowLockedException;
 use Maestro\Workflow\Exceptions\WorkflowNotFoundException;
 use Maestro\Workflow\ValueObjects\DefinitionKey;
 use Maestro\Workflow\ValueObjects\WorkflowId;
@@ -32,7 +33,8 @@ final readonly class WorkflowManagementService
      * Start a new workflow instance.
      *
      * @throws DefinitionNotFoundException
-     * @throws \Maestro\Workflow\Exceptions\WorkflowNotFoundException
+     * @throws WorkflowNotFoundException
+     * @throws WorkflowLockedException
      * @throws InvalidStateTransitionException
      * @throws \Maestro\Workflow\Exceptions\StepDependencyException
      */
@@ -74,6 +76,7 @@ final readonly class WorkflowManagementService
      * Resume a paused workflow.
      *
      * @throws WorkflowNotFoundException
+     * @throws WorkflowLockedException
      * @throws InvalidStateTransitionException
      * @throws DefinitionNotFoundException
      * @throws \Maestro\Workflow\Exceptions\StepDependencyException
@@ -109,6 +112,7 @@ final readonly class WorkflowManagementService
      * Retry a failed workflow from the failed step.
      *
      * @throws WorkflowNotFoundException
+     * @throws WorkflowLockedException
      * @throws InvalidStateTransitionException
      * @throws DefinitionNotFoundException
      * @throws \Maestro\Workflow\Exceptions\StepDependencyException

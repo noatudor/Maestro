@@ -26,22 +26,22 @@ abstract class AbstractCollection implements Countable, IteratorAggregate
     /**
      * @return Traversable<int, TValue>
      */
-    public function getIterator(): Traversable
+    final public function getIterator(): Traversable
     {
         return new ArrayIterator($this->items);
     }
 
-    public function count(): int
+    final public function count(): int
     {
         return count($this->items);
     }
 
-    public function isEmpty(): bool
+    final public function isEmpty(): bool
     {
         return $this->count() === 0;
     }
 
-    public function isNotEmpty(): bool
+    final public function isNotEmpty(): bool
     {
         return ! $this->isEmpty();
     }
@@ -49,7 +49,7 @@ abstract class AbstractCollection implements Countable, IteratorAggregate
     /**
      * @return list<TValue>
      */
-    public function all(): array
+    final public function all(): array
     {
         return $this->items;
     }
@@ -57,7 +57,7 @@ abstract class AbstractCollection implements Countable, IteratorAggregate
     /**
      * @return list<TValue>
      */
-    public function values(): array
+    final public function values(): array
     {
         return $this->items;
     }
@@ -67,7 +67,7 @@ abstract class AbstractCollection implements Countable, IteratorAggregate
      *
      * @return TValue|null
      */
-    public function first(?callable $callback = null): mixed
+    final public function first(?callable $callback = null): mixed
     {
         if ($callback === null) {
             return $this->items[0] ?? null;
@@ -87,7 +87,7 @@ abstract class AbstractCollection implements Countable, IteratorAggregate
      *
      * @return TValue|null
      */
-    public function last(?callable $callback = null): mixed
+    final public function last(?callable $callback = null): mixed
     {
         if ($callback === null) {
             $count = count($this->items);
@@ -106,23 +106,13 @@ abstract class AbstractCollection implements Countable, IteratorAggregate
     }
 
     /**
-     * @param callable(TValue): bool $callback
-     *
-     * @return list<TValue>
-     */
-    protected function filterItems(callable $callback): array
-    {
-        return array_values(array_filter($this->items, $callback));
-    }
-
-    /**
      * @template TMapValue
      *
      * @param callable(TValue): TMapValue $callback
      *
      * @return list<TMapValue>
      */
-    public function map(callable $callback): array
+    final public function map(callable $callback): array
     {
         return array_map($callback, $this->items);
     }
@@ -130,7 +120,7 @@ abstract class AbstractCollection implements Countable, IteratorAggregate
     /**
      * @param callable(TValue): bool $callback
      */
-    public function any(callable $callback): bool
+    final public function any(callable $callback): bool
     {
         foreach ($this->items as $item) {
             if ($callback($item)) {
@@ -144,7 +134,7 @@ abstract class AbstractCollection implements Countable, IteratorAggregate
     /**
      * @param callable(TValue): bool $callback
      */
-    public function every(callable $callback): bool
+    final public function every(callable $callback): bool
     {
         foreach ($this->items as $item) {
             if (! $callback($item)) {
@@ -158,7 +148,7 @@ abstract class AbstractCollection implements Countable, IteratorAggregate
     /**
      * @param callable(TValue): bool $callback
      */
-    public function none(callable $callback): bool
+    final public function none(callable $callback): bool
     {
         return ! $this->any($callback);
     }
@@ -166,7 +156,7 @@ abstract class AbstractCollection implements Countable, IteratorAggregate
     /**
      * @param callable(TValue): (int|float) $callback
      */
-    public function sum(callable $callback): int|float
+    final public function sum(callable $callback): int|float
     {
         $sum = 0;
         foreach ($this->items as $item) {
@@ -174,5 +164,15 @@ abstract class AbstractCollection implements Countable, IteratorAggregate
         }
 
         return $sum;
+    }
+
+    /**
+     * @param callable(TValue): bool $callback
+     *
+     * @return list<TValue>
+     */
+    protected function filterItems(callable $callback): array
+    {
+        return array_values(array_filter($this->items, $callback));
     }
 }

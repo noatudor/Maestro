@@ -36,6 +36,9 @@ final class CheckWorkflowTimeoutsCommand extends Command
         parent::__construct();
     }
 
+    /**
+     * @throws \Maestro\Workflow\Exceptions\InvalidStateTransitionException
+     */
     public function handle(): int
     {
         $defaultTimeout = (int) $this->option('step-timeout');

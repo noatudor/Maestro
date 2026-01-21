@@ -33,6 +33,7 @@ final readonly class StepRunHydrator
         $model->step_key = $data['step_key']->value;
         $model->attempt = $data['attempt'] ?? 1;
         $model->status = isset($data['status']) ? $data['status']->value : StepState::Pending->value;
+        $model->completed_job_count = 0;
         $model->failed_job_count = 0;
         $model->total_job_count = $data['total_job_count'] ?? 0;
 
@@ -83,6 +84,7 @@ final readonly class StepRunHydrator
      *     finished_at: CarbonImmutable|null,
      *     failure_code: string|null,
      *     failure_message: string|null,
+     *     completed_job_count: int,
      *     failed_job_count: int,
      *     total_job_count: int,
      *     created_at: CarbonImmutable,
@@ -103,6 +105,7 @@ final readonly class StepRunHydrator
             'finished_at' => $model->finished_at,
             'failure_code' => $model->failure_code,
             'failure_message' => $model->failure_message,
+            'completed_job_count' => $model->completed_job_count,
             'failed_job_count' => $model->failed_job_count,
             'total_job_count' => $model->total_job_count,
             'created_at' => $model->created_at,
@@ -160,6 +163,7 @@ final readonly class StepRunHydrator
             finishedAt: $model->finished_at,
             failureCode: $model->failure_code,
             failureMessage: $model->failure_message,
+            completedJobCount: $model->completed_job_count,
             failedJobCount: $model->failed_job_count,
             totalJobCount: $model->total_job_count,
             createdAt: $model->created_at,
@@ -179,6 +183,7 @@ final readonly class StepRunHydrator
         $model->finished_at = $stepRun->finishedAt();
         $model->failure_code = $stepRun->failureCode();
         $model->failure_message = $stepRun->failureMessage();
+        $model->completed_job_count = $stepRun->completedJobCount();
         $model->failed_job_count = $stepRun->failedJobCount();
         $model->total_job_count = $stepRun->totalJobCount();
         $model->created_at = $stepRun->createdAt;
@@ -194,6 +199,7 @@ final readonly class StepRunHydrator
         $model->finished_at = $stepRun->finishedAt();
         $model->failure_code = $stepRun->failureCode();
         $model->failure_message = $stepRun->failureMessage();
+        $model->completed_job_count = $stepRun->completedJobCount();
         $model->failed_job_count = $stepRun->failedJobCount();
         $model->total_job_count = $stepRun->totalJobCount();
         $model->updated_at = $stepRun->updatedAt();

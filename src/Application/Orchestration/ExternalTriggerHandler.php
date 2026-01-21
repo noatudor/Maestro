@@ -7,6 +7,7 @@ namespace Maestro\Workflow\Application\Orchestration;
 use Maestro\Workflow\Contracts\WorkflowRepository;
 use Maestro\Workflow\Domain\WorkflowInstance;
 use Maestro\Workflow\Exceptions\InvalidStateTransitionException;
+use Maestro\Workflow\Exceptions\WorkflowLockedException;
 use Maestro\Workflow\Exceptions\WorkflowNotFoundException;
 use Maestro\Workflow\ValueObjects\WorkflowId;
 
@@ -34,8 +35,9 @@ final readonly class ExternalTriggerHandler
      * @param array<string, mixed> $payload Optional payload data from the trigger
      *
      * @throws WorkflowNotFoundException
+     * @throws WorkflowLockedException
      * @throws \Maestro\Workflow\Exceptions\DefinitionNotFoundException
-     * @throws \Maestro\Workflow\Exceptions\InvalidStateTransitionException
+     * @throws InvalidStateTransitionException
      * @throws \Maestro\Workflow\Exceptions\StepDependencyException
      */
     public function handleTrigger(
@@ -69,7 +71,8 @@ final readonly class ExternalTriggerHandler
      * Resume and advance a paused workflow.
      *
      * @throws WorkflowNotFoundException
-     * @throws \Maestro\Workflow\Exceptions\InvalidStateTransitionException
+     * @throws WorkflowLockedException
+     * @throws InvalidStateTransitionException
      * @throws \Maestro\Workflow\Exceptions\DefinitionNotFoundException
      * @throws \Maestro\Workflow\Exceptions\StepDependencyException
      */
@@ -93,8 +96,9 @@ final readonly class ExternalTriggerHandler
      * Useful for checking if a workflow can proceed after external conditions change.
      *
      * @throws WorkflowNotFoundException
+     * @throws WorkflowLockedException
      * @throws \Maestro\Workflow\Exceptions\DefinitionNotFoundException
-     * @throws \Maestro\Workflow\Exceptions\InvalidStateTransitionException
+     * @throws InvalidStateTransitionException
      * @throws \Maestro\Workflow\Exceptions\StepDependencyException
      */
     public function triggerEvaluation(WorkflowId $workflowId): WorkflowInstance

@@ -22,6 +22,7 @@ final readonly class JobCompletedListener
 
     /**
      * @throws \Maestro\Workflow\Exceptions\WorkflowNotFoundException
+     * @throws \Maestro\Workflow\Exceptions\WorkflowLockedException
      * @throws \Maestro\Workflow\Exceptions\DefinitionNotFoundException
      * @throws \Maestro\Workflow\Exceptions\InvalidStateTransitionException
      * @throws \Maestro\Workflow\Exceptions\StepDependencyException

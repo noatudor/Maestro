@@ -21,6 +21,7 @@ use Maestro\Workflow\Infrastructure\Persistence\QueryBuilders\StepRunQueryBuilde
  * @property CarbonImmutable|null $finished_at
  * @property string|null $failure_code
  * @property string|null $failure_message
+ * @property int $completed_job_count
  * @property int $failed_job_count
  * @property int $total_job_count
  * @property CarbonImmutable $created_at
@@ -46,6 +47,7 @@ final class StepRunModel extends Model
         'finished_at',
         'failure_code',
         'failure_message',
+        'completed_job_count',
         'failed_job_count',
         'total_job_count',
     ];
@@ -81,6 +83,7 @@ final class StepRunModel extends Model
     {
         return [
             'attempt' => 'integer',
+            'completed_job_count' => 'integer',
             'failed_job_count' => 'integer',
             'total_job_count' => 'integer',
             'started_at' => 'immutable_datetime',
