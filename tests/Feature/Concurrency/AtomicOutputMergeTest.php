@@ -3,11 +3,15 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
+use Maestro\Workflow\Domain\WorkflowInstance;
+use Maestro\Workflow\Infrastructure\Persistence\Hydrators\WorkflowHydrator;
 use Maestro\Workflow\Infrastructure\Persistence\Repositories\EloquentStepOutputRepository;
+use Maestro\Workflow\Infrastructure\Persistence\Repositories\EloquentWorkflowRepository;
 use Maestro\Workflow\Infrastructure\Serialization\PhpOutputSerializer;
 use Maestro\Workflow\Tests\Fixtures\Outputs\MergeableTestOutput;
 use Maestro\Workflow\Tests\Fixtures\Outputs\TestOutput;
-use Maestro\Workflow\ValueObjects\WorkflowId;
+use Maestro\Workflow\ValueObjects\DefinitionKey;
+use Maestro\Workflow\ValueObjects\DefinitionVersion;
 
 describe('Atomic output merge with real database', function (): void {
     beforeEach(function (): void {
@@ -16,7 +20,20 @@ describe('Atomic output merge with real database', function (): void {
             $this->serializer,
             DB::connection(),
         );
-        $this->workflowId = WorkflowId::generate();
+
+        $workflowHydrator = new WorkflowHydrator();
+        $workflowRepository = new EloquentWorkflowRepository(
+            $workflowHydrator,
+            DB::connection(),
+        );
+
+        $workflow = WorkflowInstance::create(
+            definitionKey: DefinitionKey::fromString('test-workflow'),
+            definitionVersion: DefinitionVersion::fromString('1.0.0'),
+        );
+        $workflowRepository->save($workflow);
+
+        $this->workflowId = $workflow->id;
     });
 
     describe('non-mergeable outputs', function (): void {
@@ -115,17 +132,32 @@ describe('Atomic output merge with real database', function (): void {
 
     describe('data isolation', function (): void {
         it('keeps outputs isolated between workflows', function (): void {
-            $workflowId1 = WorkflowId::generate();
-            $workflowId2 = WorkflowId::generate();
+            $workflowHydrator = new WorkflowHydrator();
+            $workflowRepository = new EloquentWorkflowRepository(
+                $workflowHydrator,
+                DB::connection(),
+            );
+
+            $workflow1 = WorkflowInstance::create(
+                definitionKey: DefinitionKey::fromString('test-workflow-1'),
+                definitionVersion: DefinitionVersion::fromString('1.0.0'),
+            );
+            $workflowRepository->save($workflow1);
+
+            $workflow2 = WorkflowInstance::create(
+                definitionKey: DefinitionKey::fromString('test-workflow-2'),
+                definitionVersion: DefinitionVersion::fromString('1.0.0'),
+            );
+            $workflowRepository->save($workflow2);
 
             $output1 = new MergeableTestOutput(['workflow1-item']);
-            $this->repository->saveWithAtomicMerge($workflowId1, $output1);
+            $this->repository->saveWithAtomicMerge($workflow1->id, $output1);
 
             $output2 = new MergeableTestOutput(['workflow2-item']);
-            $this->repository->saveWithAtomicMerge($workflowId2, $output2);
+            $this->repository->saveWithAtomicMerge($workflow2->id, $output2);
 
-            $retrieved1 = $this->repository->find($workflowId1, MergeableTestOutput::class);
-            $retrieved2 = $this->repository->find($workflowId2, MergeableTestOutput::class);
+            $retrieved1 = $this->repository->find($workflow1->id, MergeableTestOutput::class);
+            $retrieved2 = $this->repository->find($workflow2->id, MergeableTestOutput::class);
 
             expect($retrieved1->items)->toBe(['workflow1-item']);
             expect($retrieved2->items)->toBe(['workflow2-item']);

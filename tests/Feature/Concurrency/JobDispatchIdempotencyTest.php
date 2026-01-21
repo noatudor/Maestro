@@ -2,15 +2,20 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\DB;
 use Maestro\Workflow\Domain\JobRecord;
 use Maestro\Workflow\Domain\StepRun;
+use Maestro\Workflow\Domain\WorkflowInstance;
 use Maestro\Workflow\Enums\JobState;
 use Maestro\Workflow\Infrastructure\Persistence\Hydrators\JobLedgerHydrator;
 use Maestro\Workflow\Infrastructure\Persistence\Hydrators\StepRunHydrator;
+use Maestro\Workflow\Infrastructure\Persistence\Hydrators\WorkflowHydrator;
 use Maestro\Workflow\Infrastructure\Persistence\Repositories\EloquentJobLedgerRepository;
 use Maestro\Workflow\Infrastructure\Persistence\Repositories\EloquentStepRunRepository;
+use Maestro\Workflow\Infrastructure\Persistence\Repositories\EloquentWorkflowRepository;
+use Maestro\Workflow\ValueObjects\DefinitionKey;
+use Maestro\Workflow\ValueObjects\DefinitionVersion;
 use Maestro\Workflow\ValueObjects\StepKey;
-use Maestro\Workflow\ValueObjects\WorkflowId;
 use Ramsey\Uuid\Uuid;
 
 describe('Job dispatch idempotency with real database', function (): void {
@@ -19,7 +24,20 @@ describe('Job dispatch idempotency with real database', function (): void {
         $this->stepRunHydrator = new StepRunHydrator();
         $this->jobLedgerRepository = new EloquentJobLedgerRepository($this->jobLedgerHydrator);
         $this->stepRunRepository = new EloquentStepRunRepository($this->stepRunHydrator);
-        $this->workflowId = WorkflowId::generate();
+
+        $workflowHydrator = new WorkflowHydrator();
+        $workflowRepository = new EloquentWorkflowRepository(
+            $workflowHydrator,
+            DB::connection(),
+        );
+
+        $workflow = WorkflowInstance::create(
+            definitionKey: DefinitionKey::fromString('test-workflow'),
+            definitionVersion: DefinitionVersion::fromString('1.0.0'),
+        );
+        $workflowRepository->save($workflow);
+
+        $this->workflowId = $workflow->id;
     });
 
     describe('findByJobUuid', function (): void {

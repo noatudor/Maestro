@@ -3,18 +3,36 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 use Maestro\Workflow\Domain\StepRun;
+use Maestro\Workflow\Domain\WorkflowInstance;
 use Maestro\Workflow\Enums\StepState;
 use Maestro\Workflow\Infrastructure\Persistence\Hydrators\StepRunHydrator;
+use Maestro\Workflow\Infrastructure\Persistence\Hydrators\WorkflowHydrator;
 use Maestro\Workflow\Infrastructure\Persistence\Repositories\EloquentStepRunRepository;
+use Maestro\Workflow\Infrastructure\Persistence\Repositories\EloquentWorkflowRepository;
+use Maestro\Workflow\ValueObjects\DefinitionKey;
+use Maestro\Workflow\ValueObjects\DefinitionVersion;
 use Maestro\Workflow\ValueObjects\StepKey;
-use Maestro\Workflow\ValueObjects\WorkflowId;
 
 describe('Atomic step finalization with real database', function (): void {
     beforeEach(function (): void {
         $this->hydrator = new StepRunHydrator();
         $this->repository = new EloquentStepRunRepository($this->hydrator);
-        $this->workflowId = WorkflowId::generate();
+
+        $workflowHydrator = new WorkflowHydrator();
+        $workflowRepository = new EloquentWorkflowRepository(
+            $workflowHydrator,
+            DB::connection(),
+        );
+
+        $workflow = WorkflowInstance::create(
+            definitionKey: DefinitionKey::fromString('test-workflow'),
+            definitionVersion: DefinitionVersion::fromString('1.0.0'),
+        );
+        $workflowRepository->save($workflow);
+
+        $this->workflowId = $workflow->id;
     });
 
     describe('finalizeAsSucceeded', function (): void {
