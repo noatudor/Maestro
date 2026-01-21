@@ -14,7 +14,10 @@ use Maestro\Workflow\ValueObjects\StepKey;
 use Maestro\Workflow\ValueObjects\StepRunId;
 use Maestro\Workflow\ValueObjects\WorkflowId;
 
-final class InMemoryStepRunRepository implements StepRunRepository
+/**
+ * @internal For testing purposes - can be extended in tests
+ */
+class InMemoryStepRunRepository implements StepRunRepository
 {
     /** @var array<string, StepRun> */
     private array $stepRuns = [];

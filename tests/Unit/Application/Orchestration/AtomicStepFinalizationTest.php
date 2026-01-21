@@ -11,6 +11,7 @@ use Maestro\Workflow\Enums\StepState;
 use Maestro\Workflow\Tests\Fakes\InMemoryJobLedgerRepository;
 use Maestro\Workflow\Tests\Fakes\InMemoryStepRunRepository;
 use Maestro\Workflow\ValueObjects\StepKey;
+use Maestro\Workflow\ValueObjects\StepRunId;
 use Maestro\Workflow\ValueObjects\WorkflowId;
 
 describe('StepFinalizer atomic finalization', function (): void {
@@ -117,11 +118,10 @@ describe('StepFinalizer atomic finalization', function (): void {
         {
             public function __construct(StepRun $stepRun)
             {
-                parent::__construct();
                 $this->save($stepRun);
             }
 
-            public function finalizeAsSucceeded(Maestro\Workflow\ValueObjects\StepRunId $stepRunId, CarbonImmutable $finishedAt): bool
+            public function finalizeAsSucceeded(StepRunId $stepRunId, CarbonImmutable $finishedAt): bool
             {
                 return false;
             }

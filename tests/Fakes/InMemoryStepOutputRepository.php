@@ -9,7 +9,10 @@ use Maestro\Workflow\Contracts\StepOutput;
 use Maestro\Workflow\Contracts\StepOutputRepository;
 use Maestro\Workflow\ValueObjects\WorkflowId;
 
-final class InMemoryStepOutputRepository implements StepOutputRepository
+/**
+ * @internal For testing purposes - can be extended in tests
+ */
+class InMemoryStepOutputRepository implements StepOutputRepository
 {
     /**
      * @var array<string, array<class-string<StepOutput>, StepOutput>>

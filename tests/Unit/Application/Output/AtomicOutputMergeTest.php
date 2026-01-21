@@ -48,9 +48,7 @@ describe('StepOutputStore atomic merge', function (): void {
             public function __construct(
                 private readonly WorkflowId $expectedWorkflowId,
                 private bool &$saveWithAtomicMergeCalled,
-            ) {
-                parent::__construct();
-            }
+            ) {}
 
             public function saveWithAtomicMerge(WorkflowId $workflowId, MergeableOutput $output): void
             {
@@ -75,9 +73,7 @@ describe('StepOutputStore atomic merge', function (): void {
             public function __construct(
                 private readonly WorkflowId $expectedWorkflowId,
                 private bool &$saveWithAtomicMergeCalled,
-            ) {
-                parent::__construct();
-            }
+            ) {}
 
             public function saveWithAtomicMerge(WorkflowId $workflowId, MergeableOutput $output): void
             {
