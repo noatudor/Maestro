@@ -38,6 +38,7 @@ final readonly class WorkflowAdvancer
         private StepFinalizer $stepFinalizer,
         private StepDispatcher $stepDispatcher,
         private FailurePolicyHandler $failurePolicyHandler,
+        private StepConditionEvaluator $stepConditionEvaluator,
     ) {}
 
     /**
@@ -170,9 +171,9 @@ final readonly class WorkflowAdvancer
             $workflowInstance->definitionVersion,
         );
 
-        $firstStep = $workflowDefinition->getFirstStep();
+        $firstStep = $this->findNextExecutableStep($workflowInstance, $workflowDefinition, null);
+
         if (! $firstStep instanceof StepDefinition) {
-            // Empty workflow: transition through Running to Succeeded
             $workflowInstance->succeedImmediately();
             $this->workflowRepository->save($workflowInstance);
 
@@ -201,14 +202,8 @@ final readonly class WorkflowAdvancer
             return;
         }
 
-        if ($workflowDefinition->isLastStep($currentStepKey)) {
-            $workflowInstance->succeed();
-            $this->workflowRepository->save($workflowInstance);
+        $nextStep = $this->findNextExecutableStep($workflowInstance, $workflowDefinition, $currentStepKey);
 
-            return;
-        }
-
-        $nextStep = $workflowDefinition->getNextStep($currentStepKey);
         if (! $nextStep instanceof StepDefinition) {
             $workflowInstance->succeed();
             $this->workflowRepository->save($workflowInstance);
@@ -220,6 +215,37 @@ final readonly class WorkflowAdvancer
         $this->workflowRepository->save($workflowInstance);
 
         $this->stepDispatcher->dispatchStep($workflowInstance, $nextStep);
+    }
+
+    /**
+     * Find the next executable step considering conditions.
+     *
+     * Skips steps whose conditions evaluate to false.
+     */
+    private function findNextExecutableStep(
+        WorkflowInstance $workflowInstance,
+        WorkflowDefinition $workflowDefinition,
+        ?StepKey $currentStepKey,
+    ): ?StepDefinition {
+        $candidateStep = $currentStepKey === null
+            ? $workflowDefinition->getFirstStep()
+            : $workflowDefinition->getNextStep($currentStepKey);
+
+        while ($candidateStep instanceof StepDefinition) {
+            $shouldExecute = $this->stepConditionEvaluator->shouldExecute(
+                $workflowInstance,
+                $workflowDefinition,
+                $candidateStep,
+            );
+
+            if ($shouldExecute) {
+                return $candidateStep;
+            }
+
+            $candidateStep = $workflowDefinition->getNextStep($candidateStep->key());
+        }
+
+        return null;
     }
 
     private function acquireApplicationLock(WorkflowInstance $workflowInstance, string $lockId): bool

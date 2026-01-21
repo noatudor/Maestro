@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Maestro\Workflow\Definition\Builders;
 
+use Maestro\Workflow\Contracts\StepCondition;
 use Maestro\Workflow\Contracts\StepOutput;
 use Maestro\Workflow\Definition\Config\QueueConfiguration;
 use Maestro\Workflow\Definition\Config\RetryConfiguration;
@@ -34,6 +35,8 @@ final class SingleJobStepBuilder
     private ?StepTimeout $stepTimeout = null;
 
     private ?QueueConfiguration $queueConfiguration = null;
+
+    private ?StepCondition $stepCondition = null;
 
     private function __construct(
         private readonly StepKey $stepKey,
@@ -169,6 +172,13 @@ final class SingleJobStepBuilder
         return $this;
     }
 
+    public function when(StepCondition $condition): self
+    {
+        $this->stepCondition = $condition;
+
+        return $this;
+    }
+
     public function build(): SingleJobStepDefinition
     {
         return SingleJobStepDefinition::create(
@@ -181,6 +191,7 @@ final class SingleJobStepBuilder
             $this->retryConfiguration,
             $this->stepTimeout,
             $this->queueConfiguration,
+            $this->stepCondition,
         );
     }
 }

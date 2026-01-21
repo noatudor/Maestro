@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Maestro\Workflow\Definition\Steps;
 
+use Maestro\Workflow\Contracts\StepCondition;
 use Maestro\Workflow\Contracts\StepDefinition;
 use Maestro\Workflow\Contracts\StepOutput;
 use Maestro\Workflow\Definition\Config\QueueConfiguration;
@@ -27,6 +28,7 @@ abstract readonly class AbstractStepDefinition implements StepDefinition
         private RetryConfiguration $retryConfiguration,
         private StepTimeout $stepTimeout,
         private QueueConfiguration $queueConfiguration,
+        private ?StepCondition $stepCondition = null,
     ) {}
 
     final public function key(): StepKey
@@ -77,5 +79,10 @@ abstract readonly class AbstractStepDefinition implements StepDefinition
     final public function producesOutput(): bool
     {
         return $this->produces !== null;
+    }
+
+    final public function condition(): ?StepCondition
+    {
+        return $this->stepCondition;
     }
 }
