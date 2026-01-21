@@ -26,12 +26,13 @@ describe('JobState', static function (): void {
             expect(JobState::Dispatched->canTransitionTo(JobState::Running))->toBeTrue();
         });
 
-        it('denies dispatched to other states', function (JobState $jobState): void {
-            expect(JobState::Dispatched->canTransitionTo($jobState))->toBeFalse();
-        })->with([
-            'succeeded' => JobState::Succeeded,
-            'failed' => JobState::Failed,
-        ]);
+        it('allows dispatched to failed for stale job detection', function (): void {
+            expect(JobState::Dispatched->canTransitionTo(JobState::Failed))->toBeTrue();
+        });
+
+        it('denies dispatched to succeeded', function (): void {
+            expect(JobState::Dispatched->canTransitionTo(JobState::Succeeded))->toBeFalse();
+        });
 
         it('allows running to terminal states', function (JobState $jobState): void {
             expect(JobState::Running->canTransitionTo($jobState))->toBeTrue();

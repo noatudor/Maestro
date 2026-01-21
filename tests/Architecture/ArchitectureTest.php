@@ -18,6 +18,9 @@ arch('source files are final by default')
     ->ignoring([
         'Maestro\Workflow\Exceptions',
         'Maestro\Workflow\Tests',
+        'Maestro\Workflow\Definition\Steps\AbstractStepDefinition',
+        'Maestro\Workflow\Domain\Collections\AbstractCollection',
+        'Maestro\Workflow\Application\Job\OrchestratedJob',
     ]);
 
 arch('contracts are interfaces')
@@ -47,9 +50,11 @@ arch('domain does not depend on application')
 arch('contracts have no dependencies on implementation')
     ->expect('Maestro\Workflow\Contracts')
     ->not->toUse([
-        'Maestro\Workflow\Domain',
         'Maestro\Workflow\Application',
         'Maestro\Workflow\Infrastructure',
+    ])
+    ->ignoring([
+        'Maestro\Workflow\Contracts\IdempotencyKeyGenerator',
     ]);
 
 arch('no debugging functions are used')

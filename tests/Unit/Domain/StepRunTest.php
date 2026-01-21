@@ -145,9 +145,15 @@ describe('StepRun', static function (): void {
 
         it('calculates succeeded job count', function (): void {
             $stepRun = StepRun::create($this->workflowId, $this->stepKey, totalJobCount: 5);
-            $stepRun->incrementFailedJobCount();
+            $stepRun->recordJobSuccess();
+            $stepRun->recordJobSuccess();
+            $stepRun->recordJobSuccess();
+            $stepRun->recordJobSuccess();
+            $stepRun->recordJobFailure();
 
-            expect($stepRun->succeededJobCount())->toBe(4);
+            expect($stepRun->succeededJobCount())->toBe(4)
+                ->and($stepRun->failedJobCount())->toBe(1)
+                ->and($stepRun->completedJobCount())->toBe(5);
         });
 
         it('records job success', function (): void {
@@ -235,6 +241,7 @@ describe('StepRun', static function (): void {
                 finishedAt: null,
                 failureCode: null,
                 failureMessage: null,
+                completedJobCount: 3,
                 failedJobCount: 1,
                 totalJobCount: 5,
                 createdAt: $now,

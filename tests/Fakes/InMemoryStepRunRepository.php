@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Maestro\Workflow\Tests\Fakes;
 
+use Carbon\CarbonImmutable;
 use Maestro\Workflow\Contracts\StepRunRepository;
 use Maestro\Workflow\Domain\Collections\StepRunCollection;
 use Maestro\Workflow\Domain\StepRun;
@@ -90,6 +91,60 @@ final class InMemoryStepRunRepository implements StepRunRepository
         );
 
         return new StepRunCollection(array_values($stepRuns));
+    }
+
+    public function updateStatusAtomically(StepRunId $stepRunId, StepState $fromState, StepState $toState): bool
+    {
+        $stepRun = $this->find($stepRunId);
+
+        if ($stepRun === null || $stepRun->status() !== $fromState) {
+            return false;
+        }
+
+        if ($toState === StepState::Succeeded) {
+            $stepRun->succeed();
+        } elseif ($toState === StepState::Failed) {
+            $stepRun->fail('ATOMIC_UPDATE', 'Status updated atomically');
+        } elseif ($toState === StepState::Running) {
+            $stepRun->start();
+        }
+
+        $this->save($stepRun);
+
+        return true;
+    }
+
+    public function finalizeAsSucceeded(StepRunId $stepRunId, CarbonImmutable $finishedAt): bool
+    {
+        $stepRun = $this->find($stepRunId);
+
+        if ($stepRun === null || $stepRun->status() !== StepState::Running) {
+            return false;
+        }
+
+        $stepRun->succeed();
+        $this->save($stepRun);
+
+        return true;
+    }
+
+    public function finalizeAsFailed(
+        StepRunId $stepRunId,
+        string $failureCode,
+        string $failureMessage,
+        int $failedJobCount,
+        CarbonImmutable $finishedAt,
+    ): bool {
+        $stepRun = $this->find($stepRunId);
+
+        if ($stepRun === null || $stepRun->status() !== StepState::Running) {
+            return false;
+        }
+
+        $stepRun->fail($failureCode, $failureMessage);
+        $this->save($stepRun);
+
+        return true;
     }
 
     /**

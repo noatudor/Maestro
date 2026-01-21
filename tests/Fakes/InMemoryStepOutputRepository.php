@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Maestro\Workflow\Tests\Fakes;
 
+use Maestro\Workflow\Contracts\MergeableOutput;
 use Maestro\Workflow\Contracts\StepOutput;
 use Maestro\Workflow\Contracts\StepOutputRepository;
 use Maestro\Workflow\ValueObjects\WorkflowId;
@@ -28,6 +29,18 @@ final class InMemoryStepOutputRepository implements StepOutputRepository
     }
 
     /**
+     * @template T of StepOutput
+     *
+     * @param class-string<T> $outputClass
+     *
+     * @return T|null
+     */
+    public function findForUpdate(WorkflowId $workflowId, string $outputClass): ?StepOutput
+    {
+        return $this->find($workflowId, $outputClass);
+    }
+
+    /**
      * @param class-string<StepOutput> $outputClass
      */
     public function has(WorkflowId $workflowId, string $outputClass): bool
@@ -42,6 +55,20 @@ final class InMemoryStepOutputRepository implements StepOutputRepository
         }
 
         $this->outputs[$workflowId->value][$output::class] = $output;
+    }
+
+    public function saveWithAtomicMerge(WorkflowId $workflowId, MergeableOutput $output): void
+    {
+        $outputClass = $output::class;
+
+        $existing = $this->find($workflowId, $outputClass);
+
+        $finalOutput = $output;
+        if ($existing instanceof MergeableOutput) {
+            $finalOutput = $existing->mergeWith($output);
+        }
+
+        $this->save($workflowId, $finalOutput);
     }
 
     /**

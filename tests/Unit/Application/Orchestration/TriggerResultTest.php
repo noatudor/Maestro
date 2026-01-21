@@ -28,7 +28,7 @@ describe('TriggerResult', function (): void {
 
     describe('workflowTerminal', function (): void {
         it('creates terminal state result', function (): void {
-            $this->workflow->start(\Maestro\Workflow\ValueObjects\StepKey::fromString('step-1'));
+            $this->workflow->start(Maestro\Workflow\ValueObjects\StepKey::fromString('step-1'));
             $this->workflow->succeed();
 
             $result = TriggerResult::workflowTerminal($this->workflow);

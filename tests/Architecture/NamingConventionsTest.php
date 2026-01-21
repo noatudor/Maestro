@@ -13,10 +13,12 @@ arch('service providers have ServiceProvider suffix')
     ->classes()
     ->toHaveSuffix('ServiceProvider')
     ->ignoring([
+        'Maestro\Workflow\Definition',
         'Maestro\Workflow\Domain',
         'Maestro\Workflow\Application',
         'Maestro\Workflow\Infrastructure',
         'Maestro\Workflow\Contracts',
+        'Maestro\Workflow\Console',
         'Maestro\Workflow\Enums',
         'Maestro\Workflow\Events',
         'Maestro\Workflow\Exceptions',
