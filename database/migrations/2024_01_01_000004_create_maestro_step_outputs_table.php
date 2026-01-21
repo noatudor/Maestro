@@ -15,7 +15,7 @@ return new class extends Migration
             $table->uuid('workflow_id');
             $table->string('step_key', 255);
             $table->string('output_class', 500);
-            $table->binary('payload');
+            $table->longText('payload');
             $table->timestamps();
 
             $table->foreign('workflow_id', 'fk_step_outputs_workflow')
