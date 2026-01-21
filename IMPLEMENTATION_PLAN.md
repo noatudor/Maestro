@@ -521,7 +521,7 @@ Create Laravel service provider and configuration system.
    - Register commands
    - Publish migrations and config
 
-14.3. **Create Facade (Optional)**
+14.3. **Create Facade
    - `Maestro` facade for WorkflowService
    - Convenient static access to common operations
 
@@ -559,7 +559,7 @@ Final integration, edge case handling, and polish.
    - Rapid retry attempts
    - Very long-running jobs
 
-15.4. **Documentation**
+15.4. **Documentation in Html format**
    - Usage guide with examples
    - Configuration reference
    - Troubleshooting guide

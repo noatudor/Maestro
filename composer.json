@@ -73,7 +73,7 @@
         "analyse": "./vendor/bin/sail bin phpstan analyse --memory-limit=2G",
         "baseline": "./vendor/bin/sail bin phpstan analyse --generate-baseline --memory-limit=2G",
         "test": "./vendor/bin/sail bin pest",
-        "test-coverage": "./vendor/bin/sail bin pest --coverage --min=95",
+        "test-coverage": "./vendor/bin/sail php -d pcov.enabled=1 vendor/bin/pest --coverage --min=95",
         "test-unit": "./vendor/bin/sail bin pest --testsuite=Unit",
         "test-feature": "./vendor/bin/sail bin pest --testsuite=Feature",
         "test-arch": "./vendor/bin/sail bin pest --testsuite=Architecture",

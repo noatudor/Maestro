@@ -11,23 +11,89 @@ Maestro is a high-performance Laravel workflow orchestration package designed to
 - **Laravel Version**: 11.x and 12.x
 - **License**: MIT
 
-## Quick Reference
+## Development Environment
+
+> **CRITICAL: All commands MUST run inside Laravel Sail.**
+>
+> The Sail container includes PHP 8.4 with all required extensions:
+> - **pcov** for code coverage
+> - **redis**, **mysql**, **pgsql** for database drivers
+> - All Laravel-required extensions
+>
+> Running commands locally (without Sail) will fail.
+
+### Starting the Environment
 
 ```bash
-# Run tests
-composer test
+# Start Sail containers (REQUIRED before running ANY commands)
+./vendor/bin/sail up -d
+
+# Stop containers when done
+./vendor/bin/sail down
+```
+
+### Verifying Sail is Running
+
+Before running any development commands, ensure Sail is running:
+
+```bash
+# Check if containers are running
+docker ps | grep sail
+```
+
+## Quick Reference
+
+> **ALWAYS prefix commands with `./vendor/bin/sail`**
+
+All composer scripts are configured to run inside the Sail container:
+
+```bash
+# Run tests (ALWAYS use Sail)
+./vendor/bin/sail composer test
 
 # Run tests with coverage (must be ≥95%)
-composer test-coverage
+./vendor/bin/sail composer test-coverage
 
 # Static analysis (PHPStan level 9)
-composer analyse
+./vendor/bin/sail composer analyse
 
 # Format code
-composer format
+./vendor/bin/sail composer format
 
 # Run all checks (before committing)
-composer check
+./vendor/bin/sail composer check
+
+# Run Rector refactoring
+./vendor/bin/sail composer refactor
+```
+
+### Direct Sail Commands
+
+You can run tools directly via Sail (note the `bin` shortcut):
+
+```bash
+# Run specific test file
+./vendor/bin/sail bin pest tests/Unit/ValueObjects/WorkflowIdTest.php
+
+# Run PHPStan with verbose output
+./vendor/bin/sail bin phpstan analyse --verbose
+
+# Run Pint check (dry-run)
+./vendor/bin/sail bin pint --test
+```
+
+### Common Mistakes to Avoid
+
+```bash
+# WRONG - Running locally will fail (no pcov, wrong PHP version, etc.)
+./vendor/bin/pest
+./vendor/bin/phpstan analyse
+composer test
+
+# CORRECT - Always use Sail
+./vendor/bin/sail bin pest
+./vendor/bin/sail bin phpstan analyse
+./vendor/bin/sail composer test
 ```
 
 ---
@@ -607,7 +673,7 @@ final readonly class WorkflowWasStarted {} // Redundant "Was"
 final readonly class StartWorkflow {}       // Command, not event
 final readonly class OnWorkflowStart {}     // Handler naming
 ```
-
+    
 ---
 
 ## Import Ordering
