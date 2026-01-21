@@ -22,10 +22,10 @@ describe('WorkflowDefinitionValidator', static function (): void {
     describe('validate empty workflow', static function (): void {
         it('returns error for empty workflow', function (): void {
             $workflowDefinition = WorkflowDefinition::create(
+                definitionKey: DefinitionKey::fromString('empty'),
+                definitionVersion: DefinitionVersion::initial(),
                 displayName: 'Empty',
-                key: DefinitionKey::fromString('empty'),
-                version: DefinitionVersion::initial(),
-                steps: StepCollection::empty(),
+                stepCollection: StepCollection::empty(),
             );
 
             $result = $this->validator->validate($workflowDefinition);
@@ -46,10 +46,10 @@ describe('WorkflowDefinitionValidator', static function (): void {
                 ->build();
 
             $workflowDefinition = WorkflowDefinition::create(
+                definitionKey: DefinitionKey::fromString('test'),
+                definitionVersion: DefinitionVersion::initial(),
                 displayName: 'Test',
-                key: DefinitionKey::fromString('test'),
-                version: DefinitionVersion::initial(),
-                steps: StepCollection::fromArray([$singleJobStepDefinition, $step2]),
+                stepCollection: StepCollection::fromArray([$singleJobStepDefinition, $step2]),
             );
 
             $result = $this->validator->validate($workflowDefinition);
@@ -100,10 +100,10 @@ describe('WorkflowDefinitionValidator', static function (): void {
                 ->build();
 
             $workflowDefinition = WorkflowDefinition::create(
+                definitionKey: DefinitionKey::fromString('test'),
+                definitionVersion: DefinitionVersion::initial(),
                 displayName: 'Test',
-                key: DefinitionKey::fromString('test'),
-                version: DefinitionVersion::initial(),
-                steps: StepCollection::fromArray([$singleJobStepDefinition]),
+                stepCollection: StepCollection::fromArray([$singleJobStepDefinition]),
             );
 
             $result = $this->validator->validate($workflowDefinition);
@@ -119,10 +119,10 @@ describe('WorkflowDefinitionValidator', static function (): void {
                 ->build();
 
             $workflowDefinition = WorkflowDefinition::create(
+                definitionKey: DefinitionKey::fromString('test'),
+                definitionVersion: DefinitionVersion::initial(),
                 displayName: 'Test',
-                key: DefinitionKey::fromString('test'),
-                version: DefinitionVersion::initial(),
-                steps: StepCollection::fromArray([$singleJobStepDefinition]),
+                stepCollection: StepCollection::fromArray([$singleJobStepDefinition]),
             );
 
             $result = $this->validator->validate($workflowDefinition);
@@ -138,10 +138,10 @@ describe('WorkflowDefinitionValidator', static function (): void {
                 ->build();
 
             $workflowDefinition = WorkflowDefinition::create(
+                definitionKey: DefinitionKey::fromString('test'),
+                definitionVersion: DefinitionVersion::initial(),
                 displayName: 'Test',
-                key: DefinitionKey::fromString('test'),
-                version: DefinitionVersion::initial(),
-                steps: StepCollection::fromArray([$singleJobStepDefinition]),
+                stepCollection: StepCollection::fromArray([$singleJobStepDefinition]),
             );
 
             $result = $this->validator->validate($workflowDefinition);
@@ -156,11 +156,11 @@ describe('WorkflowDefinitionValidator', static function (): void {
                 ->build();
 
             $workflowDefinition = WorkflowDefinition::create(
+                definitionKey: DefinitionKey::fromString('test'),
+                definitionVersion: DefinitionVersion::initial(),
                 displayName: 'Test',
+                stepCollection: StepCollection::fromArray([$singleJobStepDefinition]),
                 contextLoaderClass: 'NonExistent\\ContextLoader',
-                key: DefinitionKey::fromString('test'),
-                version: DefinitionVersion::initial(),
-                steps: StepCollection::fromArray([$singleJobStepDefinition]),
             );
 
             $result = $this->validator->validate($workflowDefinition);
@@ -179,10 +179,10 @@ describe('WorkflowDefinitionValidator', static function (): void {
                 ->build();
 
             $workflowDefinition = WorkflowDefinition::create(
+                definitionKey: DefinitionKey::fromString('test'),
+                definitionVersion: DefinitionVersion::initial(),
                 displayName: 'Test',
-                key: DefinitionKey::fromString('test'),
-                version: DefinitionVersion::initial(),
-                steps: StepCollection::fromArray([$singleJobStepDefinition]),
+                stepCollection: StepCollection::fromArray([$singleJobStepDefinition]),
             );
 
             $validationResult = $validator->validate($workflowDefinition);

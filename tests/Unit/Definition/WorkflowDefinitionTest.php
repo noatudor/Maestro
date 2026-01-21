@@ -32,11 +32,11 @@ describe('WorkflowDefinition', static function (): void {
             ->build();
 
         $this->definition = WorkflowDefinition::create(
+            definitionKey: DefinitionKey::fromString('test-workflow'),
+            definitionVersion: DefinitionVersion::fromString('1.0.0'),
             displayName: 'Test Workflow',
+            stepCollection: StepCollection::fromArray([$singleJobStepDefinition, $step2, $step3]),
             contextLoaderClass: TestContextLoader::class,
-            key: DefinitionKey::fromString('test-workflow'),
-            version: DefinitionVersion::fromString('1.0.0'),
-            steps: StepCollection::fromArray([$singleJobStepDefinition, $step2, $step3]),
         );
     });
 
@@ -73,10 +73,10 @@ describe('WorkflowDefinition', static function (): void {
 
         it('returns false when context loader is null', function (): void {
             $workflowDefinition = WorkflowDefinition::create(
+                definitionKey: DefinitionKey::fromString('test'),
+                definitionVersion: DefinitionVersion::initial(),
                 displayName: 'Test',
-                key: DefinitionKey::fromString('test'),
-                version: DefinitionVersion::initial(),
-                steps: StepCollection::empty(),
+                stepCollection: StepCollection::empty(),
             );
 
             expect($workflowDefinition->hasContextLoader())->toBeFalse();

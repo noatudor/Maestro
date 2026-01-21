@@ -16,10 +16,10 @@ describe('FanOutStepDefinition', static function (): void {
             $iterator = static fn (): array => [1, 2, 3];
 
             $fanOutStepDefinition = FanOutStepDefinition::create(
+                stepKey: StepKey::fromString('process-items'),
                 displayName: 'Process Items',
                 jobClass: ProcessItemJob::class,
                 itemIteratorFactory: $iterator,
-                key: StepKey::fromString('process-items'),
             );
 
             expect($fanOutStepDefinition->key()->toString())->toBe('process-items');
@@ -36,6 +36,7 @@ describe('FanOutStepDefinition', static function (): void {
             $argsFactory = static fn (mixed $item): array => ['item' => $item];
 
             $fanOutStepDefinition = FanOutStepDefinition::create(
+                stepKey: StepKey::fromString('batch'),
                 displayName: 'Batch Process',
                 jobClass: ProcessItemJob::class,
                 itemIteratorFactory: $iterator,
@@ -45,7 +46,6 @@ describe('FanOutStepDefinition', static function (): void {
                 requires: [TestOutput::class],
                 produces: TestOutput::class,
                 failurePolicy: FailurePolicy::ContinueWithPartial,
-                key: StepKey::fromString('batch'),
             );
 
             expect($fanOutStepDefinition->jobArgumentsFactory())->toBe($argsFactory);
@@ -57,11 +57,11 @@ describe('FanOutStepDefinition', static function (): void {
 
         it('enforces minimum parallelism limit of 1', function (): void {
             $fanOutStepDefinition = FanOutStepDefinition::create(
+                stepKey: StepKey::fromString('test'),
                 displayName: 'Test',
                 jobClass: ProcessItemJob::class,
                 itemIteratorFactory: static fn (): array => [],
                 parallelismLimit: 0,
-                key: StepKey::fromString('test'),
             );
 
             expect($fanOutStepDefinition->parallelismLimit())->toBe(1);
@@ -71,11 +71,11 @@ describe('FanOutStepDefinition', static function (): void {
     describe('hasParallelismLimit', static function (): void {
         it('returns true when limit is set', function (): void {
             $fanOutStepDefinition = FanOutStepDefinition::create(
+                stepKey: StepKey::fromString('test'),
                 displayName: 'Test',
                 jobClass: ProcessItemJob::class,
                 itemIteratorFactory: static fn (): array => [],
                 parallelismLimit: 5,
-                key: StepKey::fromString('test'),
             );
 
             expect($fanOutStepDefinition->hasParallelismLimit())->toBeTrue();
@@ -83,10 +83,10 @@ describe('FanOutStepDefinition', static function (): void {
 
         it('returns false when limit is null', function (): void {
             $fanOutStepDefinition = FanOutStepDefinition::create(
+                stepKey: StepKey::fromString('test'),
                 displayName: 'Test',
                 jobClass: ProcessItemJob::class,
                 itemIteratorFactory: static fn (): array => [],
-                key: StepKey::fromString('test'),
             );
 
             expect($fanOutStepDefinition->hasParallelismLimit())->toBeFalse();
@@ -96,11 +96,11 @@ describe('FanOutStepDefinition', static function (): void {
     describe('evaluateSuccess', static function (): void {
         it('evaluates with SuccessCriteria', function (): void {
             $fanOutStepDefinition = FanOutStepDefinition::create(
+                stepKey: StepKey::fromString('test'),
                 displayName: 'Test',
                 jobClass: ProcessItemJob::class,
                 itemIteratorFactory: static fn (): array => [],
                 successCriteria: SuccessCriteria::Majority,
-                key: StepKey::fromString('test'),
             );
 
             expect($fanOutStepDefinition->evaluateSuccess(3, 5))->toBeTrue();
@@ -109,11 +109,11 @@ describe('FanOutStepDefinition', static function (): void {
 
         it('evaluates with NOfMCriteria', function (): void {
             $fanOutStepDefinition = FanOutStepDefinition::create(
+                stepKey: StepKey::fromString('test'),
                 displayName: 'Test',
                 jobClass: ProcessItemJob::class,
                 itemIteratorFactory: static fn (): array => [],
                 successCriteria: NOfMCriteria::atLeast(3),
-                key: StepKey::fromString('test'),
             );
 
             expect($fanOutStepDefinition->evaluateSuccess(3, 5))->toBeTrue();

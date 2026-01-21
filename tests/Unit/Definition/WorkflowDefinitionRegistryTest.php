@@ -15,24 +15,24 @@ describe('WorkflowDefinitionRegistry', static function (): void {
         $this->registry = new WorkflowDefinitionRegistry();
 
         $this->definition1 = WorkflowDefinition::create(
+            definitionKey: DefinitionKey::fromString('order-workflow'),
+            definitionVersion: DefinitionVersion::fromString('1.0.0'),
             displayName: 'Order Workflow v1',
-            key: DefinitionKey::fromString('order-workflow'),
-            version: DefinitionVersion::fromString('1.0.0'),
-            steps: StepCollection::empty(),
+            stepCollection: StepCollection::empty(),
         );
 
         $this->definition2 = WorkflowDefinition::create(
+            definitionKey: DefinitionKey::fromString('order-workflow'),
+            definitionVersion: DefinitionVersion::fromString('2.0.0'),
             displayName: 'Order Workflow v2',
-            key: DefinitionKey::fromString('order-workflow'),
-            version: DefinitionVersion::fromString('2.0.0'),
-            steps: StepCollection::empty(),
+            stepCollection: StepCollection::empty(),
         );
 
         $this->definition3 = WorkflowDefinition::create(
+            definitionKey: DefinitionKey::fromString('payment-workflow'),
+            definitionVersion: DefinitionVersion::fromString('1.0.0'),
             displayName: 'Payment Workflow',
-            key: DefinitionKey::fromString('payment-workflow'),
-            version: DefinitionVersion::fromString('1.0.0'),
-            steps: StepCollection::empty(),
+            stepCollection: StepCollection::empty(),
         );
     });
 

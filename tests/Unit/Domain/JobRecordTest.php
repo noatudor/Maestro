@@ -247,11 +247,13 @@ describe('JobRecord', static function (): void {
             $finished = $now->addSeconds(2);
 
             $jobRecord = JobRecord::reconstitute(
+                jobId: $jobId,
                 workflowId: $this->workflowId,
                 stepRunId: $this->stepRunId,
                 jobUuid: $this->jobUuid,
                 jobClass: $this->jobClass,
                 queue: $this->queue,
+                jobState: JobState::Succeeded,
                 attempt: 2,
                 dispatchedAt: $now,
                 startedAt: $started,
@@ -263,8 +265,6 @@ describe('JobRecord', static function (): void {
                 workerId: 'worker-1',
                 createdAt: $now,
                 updatedAt: $finished,
-                id: $jobId,
-                status: JobState::Succeeded,
             );
 
             expect($jobRecord->id)->toBe($jobId)

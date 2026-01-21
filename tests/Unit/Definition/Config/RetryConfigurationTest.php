@@ -13,7 +13,7 @@ describe('RetryConfiguration', static function (): void {
                 delaySeconds: 30,
                 backoffMultiplier: 1.5,
                 maxDelaySeconds: 1800,
-                scope: RetryScope::FailedOnly,
+                retryScope: RetryScope::FailedOnly,
             );
 
             expect($retryConfiguration->maxAttempts)->toBe(5);

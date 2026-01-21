@@ -22,10 +22,10 @@ describe('WorkflowContextProvider', function (): void {
     describe('get', function (): void {
         it('returns null when no context loader is configured', function (): void {
             $workflowDefinition = WorkflowDefinition::create(
+                definitionKey: DefinitionKey::fromString('test-workflow'),
+                definitionVersion: DefinitionVersion::fromString('1.0.0'),
                 displayName: 'Test Workflow',
-                key: DefinitionKey::fromString('test-workflow'),
-                version: DefinitionVersion::fromString('1.0.0'),
-                steps: StepCollection::empty(),
+                stepCollection: StepCollection::empty(),
             );
 
             $provider = new WorkflowContextProvider($this->workflowId, $workflowDefinition, $this->container);
@@ -35,11 +35,11 @@ describe('WorkflowContextProvider', function (): void {
 
         it('loads context via context loader', function (): void {
             $workflowDefinition = WorkflowDefinition::create(
+                definitionKey: DefinitionKey::fromString('test-workflow'),
+                definitionVersion: DefinitionVersion::fromString('1.0.0'),
                 displayName: 'Test Workflow',
+                stepCollection: StepCollection::empty(),
                 contextLoaderClass: TestContextLoader::class,
-                key: DefinitionKey::fromString('test-workflow'),
-                version: DefinitionVersion::fromString('1.0.0'),
-                steps: StepCollection::empty(),
             );
 
             $loader = new TestContextLoader();
@@ -57,11 +57,11 @@ describe('WorkflowContextProvider', function (): void {
 
         it('caches the context after first load', function (): void {
             $workflowDefinition = WorkflowDefinition::create(
+                definitionKey: DefinitionKey::fromString('test-workflow'),
+                definitionVersion: DefinitionVersion::fromString('1.0.0'),
                 displayName: 'Test Workflow',
+                stepCollection: StepCollection::empty(),
                 contextLoaderClass: TestContextLoader::class,
-                key: DefinitionKey::fromString('test-workflow'),
-                version: DefinitionVersion::fromString('1.0.0'),
-                steps: StepCollection::empty(),
             );
 
             $loader = new TestContextLoader();
@@ -82,11 +82,11 @@ describe('WorkflowContextProvider', function (): void {
     describe('getTyped', function (): void {
         it('returns typed context when type matches', function (): void {
             $workflowDefinition = WorkflowDefinition::create(
+                definitionKey: DefinitionKey::fromString('test-workflow'),
+                definitionVersion: DefinitionVersion::fromString('1.0.0'),
                 displayName: 'Test Workflow',
+                stepCollection: StepCollection::empty(),
                 contextLoaderClass: TestContextLoader::class,
-                key: DefinitionKey::fromString('test-workflow'),
-                version: DefinitionVersion::fromString('1.0.0'),
-                steps: StepCollection::empty(),
             );
 
             $this->container->shouldReceive('make')
@@ -103,11 +103,11 @@ describe('WorkflowContextProvider', function (): void {
 
         it('returns null when type does not match', function (): void {
             $workflowDefinition = WorkflowDefinition::create(
+                definitionKey: DefinitionKey::fromString('test-workflow'),
+                definitionVersion: DefinitionVersion::fromString('1.0.0'),
                 displayName: 'Test Workflow',
+                stepCollection: StepCollection::empty(),
                 contextLoaderClass: TestContextLoader::class,
-                key: DefinitionKey::fromString('test-workflow'),
-                version: DefinitionVersion::fromString('1.0.0'),
-                steps: StepCollection::empty(),
             );
 
             $this->container->shouldReceive('make')
@@ -124,10 +124,10 @@ describe('WorkflowContextProvider', function (): void {
 
         it('returns null when no context loader configured', function (): void {
             $workflowDefinition = WorkflowDefinition::create(
+                definitionKey: DefinitionKey::fromString('test-workflow'),
+                definitionVersion: DefinitionVersion::fromString('1.0.0'),
                 displayName: 'Test Workflow',
-                key: DefinitionKey::fromString('test-workflow'),
-                version: DefinitionVersion::fromString('1.0.0'),
-                steps: StepCollection::empty(),
+                stepCollection: StepCollection::empty(),
             );
 
             $provider = new WorkflowContextProvider($this->workflowId, $workflowDefinition, $this->container);
@@ -139,11 +139,11 @@ describe('WorkflowContextProvider', function (): void {
     describe('hasContextLoader', function (): void {
         it('returns true when context loader is configured', function (): void {
             $workflowDefinition = WorkflowDefinition::create(
+                definitionKey: DefinitionKey::fromString('test-workflow'),
+                definitionVersion: DefinitionVersion::fromString('1.0.0'),
                 displayName: 'Test Workflow',
+                stepCollection: StepCollection::empty(),
                 contextLoaderClass: TestContextLoader::class,
-                key: DefinitionKey::fromString('test-workflow'),
-                version: DefinitionVersion::fromString('1.0.0'),
-                steps: StepCollection::empty(),
             );
 
             $provider = new WorkflowContextProvider($this->workflowId, $workflowDefinition, $this->container);
@@ -153,10 +153,10 @@ describe('WorkflowContextProvider', function (): void {
 
         it('returns false when no context loader is configured', function (): void {
             $workflowDefinition = WorkflowDefinition::create(
+                definitionKey: DefinitionKey::fromString('test-workflow'),
+                definitionVersion: DefinitionVersion::fromString('1.0.0'),
                 displayName: 'Test Workflow',
-                key: DefinitionKey::fromString('test-workflow'),
-                version: DefinitionVersion::fromString('1.0.0'),
-                steps: StepCollection::empty(),
+                stepCollection: StepCollection::empty(),
             );
 
             $provider = new WorkflowContextProvider($this->workflowId, $workflowDefinition, $this->container);
@@ -168,11 +168,11 @@ describe('WorkflowContextProvider', function (): void {
     describe('clearCache', function (): void {
         it('clears the cached context', function (): void {
             $workflowDefinition = WorkflowDefinition::create(
+                definitionKey: DefinitionKey::fromString('test-workflow'),
+                definitionVersion: DefinitionVersion::fromString('1.0.0'),
                 displayName: 'Test Workflow',
+                stepCollection: StepCollection::empty(),
                 contextLoaderClass: TestContextLoader::class,
-                key: DefinitionKey::fromString('test-workflow'),
-                version: DefinitionVersion::fromString('1.0.0'),
-                steps: StepCollection::empty(),
             );
 
             $this->container->shouldReceive('make')
@@ -193,10 +193,10 @@ describe('WorkflowContextProvider', function (): void {
     describe('workflowId', function (): void {
         it('returns the workflow id', function (): void {
             $workflowDefinition = WorkflowDefinition::create(
+                definitionKey: DefinitionKey::fromString('test-workflow'),
+                definitionVersion: DefinitionVersion::fromString('1.0.0'),
                 displayName: 'Test Workflow',
-                key: DefinitionKey::fromString('test-workflow'),
-                version: DefinitionVersion::fromString('1.0.0'),
-                steps: StepCollection::empty(),
+                stepCollection: StepCollection::empty(),
             );
 
             $provider = new WorkflowContextProvider($this->workflowId, $workflowDefinition, $this->container);

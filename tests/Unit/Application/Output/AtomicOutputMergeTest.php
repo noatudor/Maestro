@@ -43,7 +43,7 @@ describe('StepOutputStore atomic merge', function (): void {
     it('calls saveWithAtomicMerge for mergeable outputs', function (): void {
         $saveWithAtomicMergeCalled = false;
 
-        $repository = new class($this->workflowId, $saveWithAtomicMergeCalled) extends InMemoryStepOutputRepository
+        $repository = new class($saveWithAtomicMergeCalled) extends InMemoryStepOutputRepository
         {
             public function __construct(
                 private bool &$saveWithAtomicMergeCalled,
@@ -67,7 +67,7 @@ describe('StepOutputStore atomic merge', function (): void {
     it('does not call saveWithAtomicMerge for non-mergeable outputs', function (): void {
         $saveWithAtomicMergeCalled = false;
 
-        $repository = new class($this->workflowId, $saveWithAtomicMergeCalled) extends InMemoryStepOutputRepository
+        $repository = new class($saveWithAtomicMergeCalled) extends InMemoryStepOutputRepository
         {
             public function __construct(
                 private bool &$saveWithAtomicMergeCalled,

@@ -316,8 +316,10 @@ describe('WorkflowInstance', static function (): void {
             $stepKey = StepKey::fromString('current-step');
 
             $workflowInstance = WorkflowInstance::reconstitute(
+                workflowId: $workflowId,
                 definitionKey: $this->definitionKey,
                 definitionVersion: $this->definitionVersion,
+                workflowState: WorkflowState::Running,
                 currentStepKey: $stepKey,
                 pausedAt: null,
                 pausedReason: null,
@@ -330,8 +332,6 @@ describe('WorkflowInstance', static function (): void {
                 lockedAt: $now,
                 createdAt: $now,
                 updatedAt: $now,
-                id: $workflowId,
-                state: WorkflowState::Running,
             );
 
             expect($workflowInstance->id)->toBe($workflowId)

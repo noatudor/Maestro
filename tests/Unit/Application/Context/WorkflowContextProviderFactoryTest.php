@@ -20,10 +20,10 @@ describe('WorkflowContextProviderFactory', function (): void {
     it('creates a provider for a workflow', function (): void {
         $workflowId = WorkflowId::generate();
         $workflowDefinition = WorkflowDefinition::create(
+            definitionKey: DefinitionKey::fromString('test-workflow'),
+            definitionVersion: DefinitionVersion::fromString('1.0.0'),
             displayName: 'Test Workflow',
-            key: DefinitionKey::fromString('test-workflow'),
-            version: DefinitionVersion::fromString('1.0.0'),
-            steps: StepCollection::empty(),
+            stepCollection: StepCollection::empty(),
         );
 
         $provider = $this->factory->forWorkflow($workflowId, $workflowDefinition);
@@ -36,10 +36,10 @@ describe('WorkflowContextProviderFactory', function (): void {
         $workflowId1 = WorkflowId::generate();
         $workflowId2 = WorkflowId::generate();
         $workflowDefinition = WorkflowDefinition::create(
+            definitionKey: DefinitionKey::fromString('test-workflow'),
+            definitionVersion: DefinitionVersion::fromString('1.0.0'),
             displayName: 'Test Workflow',
-            key: DefinitionKey::fromString('test-workflow'),
-            version: DefinitionVersion::fromString('1.0.0'),
-            steps: StepCollection::empty(),
+            stepCollection: StepCollection::empty(),
         );
 
         $provider1 = $this->factory->forWorkflow($workflowId1, $workflowDefinition);

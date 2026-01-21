@@ -49,7 +49,7 @@ describe('StepRun', static function (): void {
 
         it('creates with a provided step run id', function (): void {
             $stepRunId = StepRunId::generate();
-            $stepRun = StepRun::create($this->workflowId, $this->stepKey, id: $stepRunId);
+            $stepRun = StepRun::create($this->workflowId, $this->stepKey, stepRunId: $stepRunId);
 
             expect($stepRun->id)->toBe($stepRunId);
         });
@@ -232,9 +232,11 @@ describe('StepRun', static function (): void {
             $now = CarbonImmutable::now();
 
             $stepRun = StepRun::reconstitute(
+                stepRunId: $stepRunId,
                 workflowId: $this->workflowId,
                 stepKey: $this->stepKey,
                 attempt: 2,
+                stepState: StepState::Running,
                 startedAt: $now,
                 finishedAt: null,
                 failureCode: null,
@@ -244,8 +246,6 @@ describe('StepRun', static function (): void {
                 totalJobCount: 5,
                 createdAt: $now,
                 updatedAt: $now,
-                id: $stepRunId,
-                status: StepState::Running,
             );
 
             expect($stepRun->id)->toBe($stepRunId)
