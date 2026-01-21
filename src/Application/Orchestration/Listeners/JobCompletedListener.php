@@ -40,13 +40,7 @@ final readonly class JobCompletedListener
 
     private function extractOrchestratedJob(JobProcessed $event): ?OrchestratedJob
     {
-        $job = $event->job;
-
-        if ($job === null) {
-            return null;
-        }
-
-        $payload = $job->payload();
+        $payload = $event->job->payload();
 
         if (! isset($payload['data']['command'])) {
             return null;

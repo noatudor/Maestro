@@ -133,6 +133,12 @@ parameters:
 			path: src/Infrastructure/Persistence/Repositories/EloquentStepOutputRepository.php
 
 		-
+			message: '#^Dynamic call to static method Maestro\\Workflow\\Infrastructure\\Persistence\\QueryBuilders\\WorkflowQueryBuilder\:\:whereNotNull\(\)\.$#'
+			identifier: staticMethod.dynamicCall
+			count: 1
+			path: src/Infrastructure/Persistence/Repositories/EloquentWorkflowRepository.php
+
+		-
 			message: '#^Method Maestro\\Workflow\\Infrastructure\\Persistence\\Repositories\\EloquentWorkflowRepository\:\:findAndLockForUpdate\(\) has Maestro\\Workflow\\Exceptions\\WorkflowLockedException in PHPDoc @throws tag but it''s not thrown\.$#'
 			identifier: throws.unusedType
 			count: 1
@@ -141,12 +147,6 @@ parameters:
 		-
 			message: '#^Dead catch \- Illuminate\\Database\\QueryException is never thrown in the try block\.$#'
 			identifier: catch.neverThrown
-			count: 1
-			path: src/Infrastructure/Persistence/Repositories/EloquentWorkflowRepository.php
-
-		-
-			message: '#^Dynamic call to static method Maestro\\Workflow\\Infrastructure\\Persistence\\QueryBuilders\\WorkflowQueryBuilder\:\:whereNotNull\(\)\.$#'
-			identifier: staticMethod.dynamicCall
 			count: 1
 			path: src/Infrastructure/Persistence/Repositories/EloquentWorkflowRepository.php
 
