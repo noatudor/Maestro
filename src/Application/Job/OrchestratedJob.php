@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Maestro\Workflow\Application\Job;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Maestro\Workflow\Application\Context\WorkflowContextProvider;
 use Maestro\Workflow\Application\Output\StepOutputStore;
+use Maestro\Workflow\Contracts\DispatchableWorkflowJob;
 use Maestro\Workflow\Contracts\WorkflowContext;
 use Maestro\Workflow\ValueObjects\StepRunId;
 use Maestro\Workflow\ValueObjects\WorkflowId;
@@ -22,7 +22,7 @@ use Maestro\Workflow\ValueObjects\WorkflowId;
  * It provides access to workflow context, step outputs, and carries
  * correlation metadata for lifecycle tracking.
  */
-abstract class OrchestratedJob implements ShouldQueue
+abstract class OrchestratedJob implements DispatchableWorkflowJob
 {
     use Dispatchable;
     use InteractsWithQueue;
@@ -93,6 +93,30 @@ abstract class OrchestratedJob implements ShouldQueue
     final public function setOutputStore(StepOutputStore $stepOutputStore): void
     {
         $this->outputStore = $stepOutputStore;
+    }
+
+    /**
+     * Get the workflow ID this job belongs to.
+     */
+    final public function getWorkflowId(): WorkflowId
+    {
+        return $this->workflowId;
+    }
+
+    /**
+     * Get the step run ID this job is part of.
+     */
+    final public function getStepRunId(): StepRunId
+    {
+        return $this->stepRunId;
+    }
+
+    /**
+     * Get the unique job UUID.
+     */
+    final public function getJobUuid(): string
+    {
+        return $this->jobUuid;
     }
 
     /**

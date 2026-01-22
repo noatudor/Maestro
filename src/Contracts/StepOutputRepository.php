@@ -58,4 +58,13 @@ interface StepOutputRepository
     public function findAllByWorkflowId(WorkflowId $workflowId): array;
 
     public function deleteByWorkflowId(WorkflowId $workflowId): void;
+
+    /**
+     * Delete outputs for specific steps.
+     *
+     * @param list<string> $stepKeys Step keys whose outputs should be deleted
+     *
+     * @return int Number of outputs deleted
+     */
+    public function deleteByStepKeys(WorkflowId $workflowId, array $stepKeys): int;
 }

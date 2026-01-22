@@ -27,4 +27,12 @@ final class StepNotFoundException extends StepException
             code: self::CODE,
         );
     }
+
+    public static function withKey(StepKey $stepKey): self
+    {
+        return new self(
+            message: sprintf("Step '%s' not found in workflow definition", $stepKey->value),
+            code: self::CODE,
+        );
+    }
 }

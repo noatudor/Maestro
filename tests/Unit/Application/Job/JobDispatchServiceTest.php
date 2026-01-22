@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Bus\Dispatcher;
+use Illuminate\Contracts\Events\Dispatcher as EventDispatcher;
 use Maestro\Workflow\Application\Job\JobDispatchService;
 use Maestro\Workflow\Definition\Config\QueueConfiguration;
 use Maestro\Workflow\Enums\JobState;
@@ -14,8 +15,10 @@ use Maestro\Workflow\ValueObjects\WorkflowId;
 describe('JobDispatchService', function (): void {
     beforeEach(function (): void {
         $this->dispatcher = Mockery::mock(Dispatcher::class);
+        $this->eventDispatcher = Mockery::mock(EventDispatcher::class);
+        $this->eventDispatcher->shouldReceive('dispatch');
         $this->repository = new InMemoryJobLedgerRepository();
-        $this->service = new JobDispatchService($this->dispatcher, $this->repository);
+        $this->service = new JobDispatchService($this->dispatcher, $this->repository, $this->eventDispatcher);
 
         $this->workflowId = WorkflowId::generate();
         $this->stepRunId = StepRunId::generate();

@@ -131,4 +131,31 @@ interface WorkflowRepository
      * @throws WorkflowLockedException
      */
     public function withLockedWorkflow(WorkflowId $workflowId, callable $callback, int $timeoutSeconds = 5): mixed;
+
+    /**
+     * Find workflows with trigger timeout before a given time.
+     *
+     * @return list<WorkflowInstance>
+     */
+    public function findByStateAndTriggerTimeoutBefore(
+        WorkflowState $workflowState,
+        CarbonImmutable $before,
+        int $limit = 100,
+    ): array;
+
+    /**
+     * Find workflows with scheduled resume before a given time.
+     *
+     * @return list<WorkflowInstance>
+     */
+    public function findByStateAndScheduledResumeBefore(
+        WorkflowState $workflowState,
+        CarbonImmutable $before,
+        int $limit = 100,
+    ): array;
+
+    /**
+     * Find a workflow that is awaiting a specific trigger key.
+     */
+    public function findByAwaitingTriggerKey(string $triggerKey): ?WorkflowInstance;
 }

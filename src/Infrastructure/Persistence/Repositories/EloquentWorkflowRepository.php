@@ -306,6 +306,71 @@ final readonly class EloquentWorkflowRepository implements WorkflowRepository
         });
     }
 
+    /**
+     * @return list<WorkflowInstance>
+     *
+     * @throws InvalidDefinitionKeyException
+     * @throws InvalidDefinitionVersionException
+     * @throws InvalidStepKeyException
+     */
+    public function findByStateAndTriggerTimeoutBefore(
+        WorkflowState $workflowState,
+        CarbonImmutable $before,
+        int $limit = 100,
+    ): array {
+        $models = WorkflowModel::query()
+            ->where('state', $workflowState->value)
+            ->whereNotNull('trigger_timeout_at')
+            ->where('trigger_timeout_at', '<=', $before)
+            ->limit($limit)
+            ->orderBy('trigger_timeout_at')
+            ->get();
+
+        return $this->hydrateModels($models->all());
+    }
+
+    /**
+     * @return list<WorkflowInstance>
+     *
+     * @throws InvalidDefinitionKeyException
+     * @throws InvalidDefinitionVersionException
+     * @throws InvalidStepKeyException
+     */
+    public function findByStateAndScheduledResumeBefore(
+        WorkflowState $workflowState,
+        CarbonImmutable $before,
+        int $limit = 100,
+    ): array {
+        $models = WorkflowModel::query()
+            ->where('state', $workflowState->value)
+            ->whereNotNull('scheduled_resume_at')
+            ->where('scheduled_resume_at', '<=', $before)
+            ->limit($limit)
+            ->orderBy('scheduled_resume_at')
+            ->get();
+
+        return $this->hydrateModels($models->all());
+    }
+
+    /**
+     * @throws InvalidDefinitionKeyException
+     * @throws InvalidDefinitionVersionException
+     * @throws InvalidStepKeyException
+     */
+    public function findByAwaitingTriggerKey(string $triggerKey): ?WorkflowInstance
+    {
+        $model = WorkflowModel::query()
+            ->where('awaiting_trigger_key', $triggerKey)
+            ->where('state', WorkflowState::Paused->value)
+            ->first();
+
+        if ($model === null) {
+            return null;
+        }
+
+        return $this->workflowHydrator->toDomain($model);
+    }
+
     private function setLockTimeout(int $timeoutSeconds): void
     {
         $driver = $this->connection->getDriverName();

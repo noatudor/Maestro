@@ -262,4 +262,66 @@ final class InMemoryWorkflowRepository implements WorkflowRepository
     {
         $this->workflows = [];
     }
+
+    /**
+     * @return list<WorkflowInstance>
+     */
+    public function findByStateAndTriggerTimeoutBefore(
+        WorkflowState $workflowState,
+        CarbonImmutable $before,
+        int $limit = 100,
+    ): array {
+        $results = array_filter(
+            $this->workflows,
+            static function (WorkflowInstance $workflowInstance) use ($workflowState, $before): bool {
+                if ($workflowInstance->state() !== $workflowState) {
+                    return false;
+                }
+                $timeout = $workflowInstance->triggerTimeoutAt();
+
+                return $timeout instanceof CarbonImmutable && $timeout->lte($before);
+            },
+        );
+
+        usort($results, static fn (WorkflowInstance $a, WorkflowInstance $b): int => $a->triggerTimeoutAt() <=> $b->triggerTimeoutAt());
+
+        return array_slice(array_values($results), 0, $limit);
+    }
+
+    /**
+     * @return list<WorkflowInstance>
+     */
+    public function findByStateAndScheduledResumeBefore(
+        WorkflowState $workflowState,
+        CarbonImmutable $before,
+        int $limit = 100,
+    ): array {
+        $results = array_filter(
+            $this->workflows,
+            static function (WorkflowInstance $workflowInstance) use ($workflowState, $before): bool {
+                if ($workflowInstance->state() !== $workflowState) {
+                    return false;
+                }
+                $scheduled = $workflowInstance->scheduledResumeAt();
+
+                return $scheduled instanceof CarbonImmutable && $scheduled->lte($before);
+            },
+        );
+
+        usort($results, static fn (WorkflowInstance $a, WorkflowInstance $b): int => $a->scheduledResumeAt() <=> $b->scheduledResumeAt());
+
+        return array_slice(array_values($results), 0, $limit);
+    }
+
+    public function findByAwaitingTriggerKey(string $triggerKey): ?WorkflowInstance
+    {
+        foreach ($this->workflows as $workflow) {
+            if ($workflow->state() === WorkflowState::Paused
+                && $workflow->awaitingTriggerKey() === $triggerKey) {
+                return $workflow;
+            }
+        }
+
+        return null;
+    }
 }

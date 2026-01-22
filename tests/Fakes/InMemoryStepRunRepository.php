@@ -158,6 +158,75 @@ class InMemoryStepRunRepository implements StepRunRepository
         );
     }
 
+    public function markAsSuperseded(StepRunId $stepRunId, StepRunId $supersededById): bool
+    {
+        $stepRun = $this->find($stepRunId);
+
+        if (! $stepRun instanceof StepRun || $stepRun->isSuperseded()) {
+            return false;
+        }
+
+        $stepRun->supersede($supersededById);
+        $this->save($stepRun);
+
+        return true;
+    }
+
+    /**
+     * @param list<StepKey> $stepKeys
+     */
+    public function findActiveByStepKeys(WorkflowId $workflowId, array $stepKeys): StepRunCollection
+    {
+        if ($stepKeys === []) {
+            return new StepRunCollection([]);
+        }
+
+        $stepKeyValues = array_map(
+            static fn (StepKey $stepKey): string => $stepKey->value,
+            $stepKeys,
+        );
+
+        $stepRuns = array_filter(
+            $this->stepRuns,
+            static fn (StepRun $stepRun): bool => $stepRun->workflowId->value === $workflowId->value
+                && in_array($stepRun->stepKey->value, $stepKeyValues, true)
+                && ! $stepRun->isSuperseded(),
+        );
+
+        return new StepRunCollection(array_values($stepRuns));
+    }
+
+    /**
+     * @param list<StepKey> $stepKeys
+     *
+     * @return array<string, StepRun>
+     */
+    public function findLatestActiveByStepKeys(WorkflowId $workflowId, array $stepKeys): array
+    {
+        if ($stepKeys === []) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($stepKeys as $stepKey) {
+            $matching = array_filter(
+                $this->stepRuns,
+                static fn (StepRun $stepRun): bool => $stepRun->workflowId->value === $workflowId->value
+                    && $stepRun->stepKey->value === $stepKey->value
+                    && ! $stepRun->isSuperseded(),
+            );
+
+            if ($matching === []) {
+                continue;
+            }
+
+            usort($matching, static fn (StepRun $a, StepRun $b): int => $b->attempt <=> $a->attempt);
+            $result[$stepKey->value] = $matching[0];
+        }
+
+        return $result;
+    }
+
     /**
      * @return list<StepRun>
      */

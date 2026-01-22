@@ -70,4 +70,27 @@ interface StepRunRepository
      * Delete all step runs for a workflow.
      */
     public function deleteByWorkflowId(WorkflowId $workflowId): void;
+
+    /**
+     * Mark a step run as superseded by another step run.
+     *
+     * @return bool True if the update was applied, false if step run not found or already superseded
+     */
+    public function markAsSuperseded(StepRunId $stepRunId, StepRunId $supersededById): bool;
+
+    /**
+     * Find all non-superseded step runs for specific step keys.
+     *
+     * @param list<StepKey> $stepKeys
+     */
+    public function findActiveByStepKeys(WorkflowId $workflowId, array $stepKeys): StepRunCollection;
+
+    /**
+     * Find the latest non-superseded step run for each step key.
+     *
+     * @param list<StepKey> $stepKeys
+     *
+     * @return array<string, StepRun> Map of step key string to step run
+     */
+    public function findLatestActiveByStepKeys(WorkflowId $workflowId, array $stepKeys): array;
 }

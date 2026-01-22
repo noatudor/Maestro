@@ -4,14 +4,25 @@ declare(strict_types=1);
 
 namespace Maestro\Workflow\Application\Orchestration;
 
+use Carbon\CarbonImmutable;
 use Deprecated;
+use Illuminate\Contracts\Events\Dispatcher;
+use Maestro\Workflow\Application\Branching\ConditionEvaluator;
+use Maestro\Workflow\Application\Output\StepOutputStoreFactory;
 use Maestro\Workflow\Contracts\StepDefinition;
 use Maestro\Workflow\Contracts\StepRunRepository;
 use Maestro\Workflow\Contracts\WorkflowRepository;
+use Maestro\Workflow\Definition\Config\PauseTriggerDefinition;
 use Maestro\Workflow\Definition\WorkflowDefinition;
 use Maestro\Workflow\Definition\WorkflowDefinitionRegistry;
+use Maestro\Workflow\Domain\Events\WorkflowFailed;
+use Maestro\Workflow\Domain\Events\WorkflowStarted;
+use Maestro\Workflow\Domain\Events\WorkflowSucceeded;
+use Maestro\Workflow\Domain\Events\WorkflowTerminatedEarly;
 use Maestro\Workflow\Domain\StepRun;
 use Maestro\Workflow\Domain\WorkflowInstance;
+use Maestro\Workflow\Enums\WorkflowState;
+use Maestro\Workflow\Exceptions\ConditionEvaluationException;
 use Maestro\Workflow\Exceptions\DefinitionNotFoundException;
 use Maestro\Workflow\Exceptions\InvalidStateTransitionException;
 use Maestro\Workflow\Exceptions\StepDependencyException;
@@ -26,6 +37,9 @@ use Ramsey\Uuid\Uuid;
  *
  * This is the core orchestration engine. It is triggered by events (job completion,
  * external triggers, manual actions) and evaluates what action to take next.
+ *
+ * Supports conditional branching and early termination through step conditions
+ * and termination conditions.
  */
 final readonly class WorkflowAdvancer
 {
@@ -38,6 +52,10 @@ final readonly class WorkflowAdvancer
         private StepFinalizer $stepFinalizer,
         private StepDispatcher $stepDispatcher,
         private FailurePolicyHandler $failurePolicyHandler,
+        private ConditionEvaluator $conditionEvaluator,
+        private StepOutputStoreFactory $stepOutputStoreFactory,
+        private Dispatcher $eventDispatcher,
+        private ?PauseTriggerHandler $pauseTriggerHandler = null,
     ) {}
 
     /**
@@ -72,6 +90,7 @@ final readonly class WorkflowAdvancer
      * @throws DefinitionNotFoundException
      * @throws InvalidStateTransitionException
      * @throws StepDependencyException
+     * @throws ConditionEvaluationException
      */
     #[Deprecated(message: 'Use evaluate() instead for database-level locking')]
     public function evaluateWithApplicationLock(WorkflowId $workflowId): void
@@ -96,6 +115,7 @@ final readonly class WorkflowAdvancer
      * @throws DefinitionNotFoundException
      * @throws InvalidStateTransitionException
      * @throws StepDependencyException
+     * @throws ConditionEvaluationException
      */
     private function doEvaluate(WorkflowInstance $workflowInstance): void
     {
@@ -130,8 +150,22 @@ final readonly class WorkflowAdvancer
         );
 
         if (! $stepRun instanceof StepRun) {
-            $this->stepDispatcher->dispatchStep($workflowInstance, $stepDefinition);
+            $dispatchResult = $this->stepDispatcher->dispatchStepWithResult($workflowInstance, $stepDefinition);
 
+            if ($dispatchResult->wasSkipped()) {
+                $this->advanceToNextStep($workflowInstance, $workflowDefinition);
+            }
+
+            return;
+        }
+
+        if ($stepRun->isSkipped()) {
+            $this->advanceToNextStep($workflowInstance, $workflowDefinition);
+
+            return;
+        }
+
+        if ($stepRun->isPolling()) {
             return;
         }
 
@@ -145,15 +179,107 @@ final readonly class WorkflowAdvancer
             $stepRun = $finalizationResult->stepRun();
         }
 
-        if ($stepRun->isFailed()) {
+        if ($stepRun->isFailed() || $stepRun->isTimedOut()) {
             $this->failurePolicyHandler->handle($workflowInstance, $stepRun, $stepDefinition);
 
             return;
         }
 
         if ($stepRun->isSucceeded()) {
+            if ($stepDefinition->hasTerminationCondition()) {
+                $terminationResult = $this->evaluateTerminationCondition(
+                    $workflowInstance,
+                    $stepDefinition,
+                );
+
+                if ($terminationResult) {
+                    return;
+                }
+            }
+
+            if ($stepDefinition->hasPauseTrigger()) {
+                $pauseTrigger = $stepDefinition->pauseTrigger();
+                if ($pauseTrigger instanceof PauseTriggerDefinition && $this->pauseTriggerHandler instanceof PauseTriggerHandler) {
+                    $this->pauseTriggerHandler->pauseForTrigger(
+                        $workflowInstance,
+                        $stepDefinition->key(),
+                        $pauseTrigger,
+                    );
+
+                    return;
+                }
+            }
+
             $this->advanceToNextStep($workflowInstance, $workflowDefinition);
         }
+    }
+
+    /**
+     * Evaluate a termination condition after a step succeeds.
+     *
+     * @return bool True if workflow was terminated, false to continue
+     *
+     * @throws InvalidStateTransitionException
+     * @throws ConditionEvaluationException
+     */
+    private function evaluateTerminationCondition(
+        WorkflowInstance $workflowInstance,
+        StepDefinition $stepDefinition,
+    ): bool {
+        $terminationConditionClass = $stepDefinition->terminationConditionClass();
+        if ($terminationConditionClass === null) {
+            return false;
+        }
+
+        $stepOutputStore = $this->stepOutputStoreFactory->forWorkflow($workflowInstance->id);
+        $terminationResult = $this->conditionEvaluator->evaluateTerminationCondition(
+            $terminationConditionClass,
+            $stepOutputStore,
+        );
+
+        if ($terminationResult->shouldContinue()) {
+            return false;
+        }
+
+        $terminalState = $terminationResult->terminalState() ?? WorkflowState::Failed;
+        $reason = $terminationResult->reason() ?? 'Termination condition met';
+
+        if ($terminalState === WorkflowState::Succeeded) {
+            $workflowInstance->succeed();
+        } else {
+            $workflowInstance->fail('EARLY_TERMINATION', $reason);
+        }
+
+        $this->workflowRepository->save($workflowInstance);
+
+        $this->eventDispatcher->dispatch(new WorkflowTerminatedEarly(
+            workflowId: $workflowInstance->id,
+            lastStepKey: $stepDefinition->key(),
+            conditionClass: $terminationConditionClass,
+            terminalState: $terminalState,
+            reason: $reason,
+            occurredAt: CarbonImmutable::now(),
+        ));
+
+        if ($terminalState === WorkflowState::Succeeded) {
+            $this->eventDispatcher->dispatch(new WorkflowSucceeded(
+                workflowId: $workflowInstance->id,
+                definitionKey: $workflowInstance->definitionKey,
+                definitionVersion: $workflowInstance->definitionVersion,
+                occurredAt: CarbonImmutable::now(),
+            ));
+        } else {
+            $this->eventDispatcher->dispatch(new WorkflowFailed(
+                workflowId: $workflowInstance->id,
+                definitionKey: $workflowInstance->definitionKey,
+                definitionVersion: $workflowInstance->definitionVersion,
+                failureCode: 'EARLY_TERMINATION',
+                failureMessage: $reason,
+                occurredAt: CarbonImmutable::now(),
+            ));
+        }
+
+        return true;
     }
 
     /**
@@ -162,6 +288,7 @@ final readonly class WorkflowAdvancer
      * @throws DefinitionNotFoundException
      * @throws InvalidStateTransitionException
      * @throws StepDependencyException
+     * @throws ConditionEvaluationException
      */
     private function startWorkflow(WorkflowInstance $workflowInstance): void
     {
@@ -172,9 +299,15 @@ final readonly class WorkflowAdvancer
 
         $firstStep = $workflowDefinition->getFirstStep();
         if (! $firstStep instanceof StepDefinition) {
-            // Empty workflow: transition through Running to Succeeded
             $workflowInstance->succeedImmediately();
             $this->workflowRepository->save($workflowInstance);
+
+            $this->eventDispatcher->dispatch(new WorkflowSucceeded(
+                workflowId: $workflowInstance->id,
+                definitionKey: $workflowInstance->definitionKey,
+                definitionVersion: $workflowInstance->definitionVersion,
+                occurredAt: CarbonImmutable::now(),
+            ));
 
             return;
         }
@@ -182,7 +315,19 @@ final readonly class WorkflowAdvancer
         $workflowInstance->start($firstStep->key());
         $this->workflowRepository->save($workflowInstance);
 
-        $this->stepDispatcher->dispatchStep($workflowInstance, $firstStep);
+        $this->eventDispatcher->dispatch(new WorkflowStarted(
+            workflowId: $workflowInstance->id,
+            definitionKey: $workflowInstance->definitionKey,
+            definitionVersion: $workflowInstance->definitionVersion,
+            firstStepKey: $firstStep->key(),
+            occurredAt: CarbonImmutable::now(),
+        ));
+
+        $stepDispatchResult = $this->stepDispatcher->dispatchStepWithResult($workflowInstance, $firstStep);
+
+        if ($stepDispatchResult->wasSkipped()) {
+            $this->advanceToNextStep($workflowInstance, $workflowDefinition);
+        }
     }
 
     /**
@@ -191,6 +336,7 @@ final readonly class WorkflowAdvancer
      * @throws InvalidStateTransitionException
      * @throws StepDependencyException
      * @throws DefinitionNotFoundException
+     * @throws ConditionEvaluationException
      */
     private function advanceToNextStep(
         WorkflowInstance $workflowInstance,
@@ -205,6 +351,13 @@ final readonly class WorkflowAdvancer
             $workflowInstance->succeed();
             $this->workflowRepository->save($workflowInstance);
 
+            $this->eventDispatcher->dispatch(new WorkflowSucceeded(
+                workflowId: $workflowInstance->id,
+                definitionKey: $workflowInstance->definitionKey,
+                definitionVersion: $workflowInstance->definitionVersion,
+                occurredAt: CarbonImmutable::now(),
+            ));
+
             return;
         }
 
@@ -213,13 +366,24 @@ final readonly class WorkflowAdvancer
             $workflowInstance->succeed();
             $this->workflowRepository->save($workflowInstance);
 
+            $this->eventDispatcher->dispatch(new WorkflowSucceeded(
+                workflowId: $workflowInstance->id,
+                definitionKey: $workflowInstance->definitionKey,
+                definitionVersion: $workflowInstance->definitionVersion,
+                occurredAt: CarbonImmutable::now(),
+            ));
+
             return;
         }
 
         $workflowInstance->advanceToStep($nextStep->key());
         $this->workflowRepository->save($workflowInstance);
 
-        $this->stepDispatcher->dispatchStep($workflowInstance, $nextStep);
+        $stepDispatchResult = $this->stepDispatcher->dispatchStepWithResult($workflowInstance, $nextStep);
+
+        if ($stepDispatchResult->wasSkipped()) {
+            $this->advanceToNextStep($workflowInstance, $workflowDefinition);
+        }
     }
 
     private function acquireApplicationLock(WorkflowInstance $workflowInstance, string $lockId): bool

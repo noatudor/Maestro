@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Model;
+use Maestro\Workflow\Application\Job\CompensationJob;
 use Maestro\Workflow\Application\Job\OrchestratedJob;
+use Maestro\Workflow\Application\Job\PollingJob;
 use Maestro\Workflow\Contracts\IdempotencyKeyGenerator;
 use Maestro\Workflow\Definition\Steps\AbstractStepDefinition;
 use Maestro\Workflow\Domain\Collections\AbstractCollection;
@@ -24,7 +26,9 @@ arch('source files are final by default')
         'Maestro\Workflow\Tests',
         AbstractStepDefinition::class,
         AbstractCollection::class,
+        CompensationJob::class,
         OrchestratedJob::class,
+        PollingJob::class,
     ]);
 
 arch('contracts are interfaces')
@@ -95,6 +99,7 @@ arch('no use of facades')
     ->not->toBeUsed()
     ->ignoring([
         'Maestro\Workflow\Facades',
+        MaestroServiceProvider::class,
         'Maestro\Workflow\Tests',
         'Workbench',
     ]);

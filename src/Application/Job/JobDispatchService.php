@@ -4,10 +4,17 @@ declare(strict_types=1);
 
 namespace Maestro\Workflow\Application\Job;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Bus\Dispatcher;
+use Illuminate\Contracts\Events\Dispatcher as EventDispatcher;
+use Maestro\Workflow\Contracts\DispatchableWorkflowJob;
 use Maestro\Workflow\Contracts\JobLedgerRepository;
 use Maestro\Workflow\Definition\Config\QueueConfiguration;
+use Maestro\Workflow\Domain\Events\JobDispatched;
 use Maestro\Workflow\Domain\JobRecord;
+use Maestro\Workflow\ValueObjects\CompensationRunId;
+use Maestro\Workflow\ValueObjects\JobId;
+use Maestro\Workflow\ValueObjects\StepKey;
 use Maestro\Workflow\ValueObjects\StepRunId;
 use Maestro\Workflow\ValueObjects\WorkflowId;
 use Ramsey\Uuid\Uuid;
@@ -28,10 +35,11 @@ final readonly class JobDispatchService
     public function __construct(
         private Dispatcher $dispatcher,
         private JobLedgerRepository $jobLedgerRepository,
+        private EventDispatcher $eventDispatcher,
     ) {}
 
     /**
-     * Dispatch a single orchestrated job.
+     * Dispatch a single workflow job.
      *
      * Creates a ledger entry before dispatching and applies queue configuration.
      * Returns the job UUID for correlation.
@@ -42,27 +50,39 @@ final readonly class JobDispatchService
      * @return string The job UUID
      */
     public function dispatch(
-        OrchestratedJob $orchestratedJob,
+        DispatchableWorkflowJob $dispatchableWorkflowJob,
         QueueConfiguration $queueConfiguration,
     ): string {
-        $this->applyQueueConfiguration($orchestratedJob, $queueConfiguration);
+        $this->applyQueueConfiguration($dispatchableWorkflowJob, $queueConfiguration);
 
-        if ($this->jobLedgerRepository->findByJobUuid($orchestratedJob->jobUuid) instanceof JobRecord) {
-            return $orchestratedJob->jobUuid;
+        if ($this->jobLedgerRepository->findByJobUuid($dispatchableWorkflowJob->getJobUuid()) instanceof JobRecord) {
+            return $dispatchableWorkflowJob->getJobUuid();
         }
 
+        $queue = $this->resolveQueueName($dispatchableWorkflowJob, $queueConfiguration);
+
         $jobRecord = JobRecord::create(
-            workflowId: $orchestratedJob->workflowId,
-            stepRunId: $orchestratedJob->stepRunId,
-            jobUuid: $orchestratedJob->jobUuid,
-            jobClass: $orchestratedJob::class,
-            queue: $this->resolveQueueName($orchestratedJob, $queueConfiguration),
+            workflowId: $dispatchableWorkflowJob->getWorkflowId(),
+            stepRunId: $dispatchableWorkflowJob->getStepRunId(),
+            jobUuid: $dispatchableWorkflowJob->getJobUuid(),
+            jobClass: $dispatchableWorkflowJob::class,
+            queue: $queue,
         );
 
         $this->jobLedgerRepository->save($jobRecord);
-        $this->dispatcher->dispatch($orchestratedJob);
+        $this->dispatcher->dispatch($dispatchableWorkflowJob);
 
-        return $orchestratedJob->jobUuid;
+        $this->eventDispatcher->dispatch(new JobDispatched(
+            workflowId: $dispatchableWorkflowJob->getWorkflowId(),
+            stepRunId: $dispatchableWorkflowJob->getStepRunId(),
+            jobId: $jobRecord->id,
+            jobUuid: $dispatchableWorkflowJob->getJobUuid(),
+            jobClass: $dispatchableWorkflowJob::class,
+            queue: $queue,
+            occurredAt: CarbonImmutable::now(),
+        ));
+
+        return $dispatchableWorkflowJob->getJobUuid();
     }
 
     /**
@@ -71,7 +91,7 @@ final readonly class JobDispatchService
      * Creates ledger entries for all jobs and dispatches them.
      * Returns an array of job UUIDs for correlation.
      *
-     * @param iterable<OrchestratedJob> $jobs
+     * @param iterable<DispatchableWorkflowJob> $jobs
      *
      * @return list<string>
      */
@@ -119,27 +139,60 @@ final readonly class JobDispatchService
         return Uuid::uuid7()->toString();
     }
 
-    private function applyQueueConfiguration(OrchestratedJob $orchestratedJob, QueueConfiguration $queueConfiguration): void
+    /**
+     * Dispatch a compensation job.
+     *
+     * Compensation jobs are dispatched without a step run, as they are tracked
+     * by the compensation run instead.
+     */
+    public function dispatchCompensationJob(
+        WorkflowId $workflowId,
+        StepKey $stepKey,
+        CompensationRunId $compensationRunId,
+        JobId $jobId,
+        string $compensationJobClass,
+        ?QueueConfiguration $queueConfiguration = null,
+    ): void {
+        $job = new $compensationJobClass(
+            $workflowId,
+            $stepKey,
+            $compensationRunId,
+            $jobId,
+        );
+
+        $effectiveQueueConfig = $queueConfiguration ?? QueueConfiguration::default();
+
+        if ($job instanceof OrchestratedJob) {
+            $this->applyQueueConfiguration($job, $effectiveQueueConfig);
+        }
+
+        $this->dispatcher->dispatch($job);
+    }
+
+    private function applyQueueConfiguration(DispatchableWorkflowJob $dispatchableWorkflowJob, QueueConfiguration $queueConfiguration): void
     {
-        if ($queueConfiguration->hasQueue()) {
-            $orchestratedJob->onQueue($queueConfiguration->queue);
+        if ($queueConfiguration->hasQueue() && method_exists($dispatchableWorkflowJob, 'onQueue')) {
+            $dispatchableWorkflowJob->onQueue($queueConfiguration->queue);
         }
 
-        if ($queueConfiguration->hasConnection()) {
-            $orchestratedJob->onConnection($queueConfiguration->connection);
+        if ($queueConfiguration->hasConnection() && method_exists($dispatchableWorkflowJob, 'onConnection')) {
+            $dispatchableWorkflowJob->onConnection($queueConfiguration->connection);
         }
 
-        if ($queueConfiguration->hasDelay()) {
-            $orchestratedJob->delay($queueConfiguration->delaySeconds);
+        if ($queueConfiguration->hasDelay() && method_exists($dispatchableWorkflowJob, 'delay')) {
+            $dispatchableWorkflowJob->delay($queueConfiguration->delaySeconds);
         }
     }
 
-    private function resolveQueueName(OrchestratedJob $orchestratedJob, QueueConfiguration $queueConfiguration): string
+    private function resolveQueueName(DispatchableWorkflowJob $dispatchableWorkflowJob, QueueConfiguration $queueConfiguration): string
     {
         if ($queueConfiguration->hasQueue() && $queueConfiguration->queue !== null) {
             return $queueConfiguration->queue;
         }
 
-        return $orchestratedJob->queue ?? 'default';
+        /** @var string|null $queue */
+        $queue = property_exists($dispatchableWorkflowJob, 'queue') ? $dispatchableWorkflowJob->queue : null;
+
+        return $queue ?? 'default';
     }
 }

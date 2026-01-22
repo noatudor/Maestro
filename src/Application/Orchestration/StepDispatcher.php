@@ -4,28 +4,39 @@ declare(strict_types=1);
 
 namespace Maestro\Workflow\Application\Orchestration;
 
+use Carbon\CarbonImmutable;
 use Closure;
+use Illuminate\Contracts\Events\Dispatcher;
+use Maestro\Workflow\Application\Branching\ConditionEvaluator;
 use Maestro\Workflow\Application\Context\WorkflowContextProviderFactory;
 use Maestro\Workflow\Application\Dependency\StepDependencyChecker;
 use Maestro\Workflow\Application\Job\JobDispatchService;
 use Maestro\Workflow\Application\Job\OrchestratedJob;
 use Maestro\Workflow\Application\Output\StepOutputStoreFactory;
 use Maestro\Workflow\Contracts\FanOutStep;
+use Maestro\Workflow\Contracts\PollingStep;
 use Maestro\Workflow\Contracts\SingleJobStep;
 use Maestro\Workflow\Contracts\StepDefinition;
 use Maestro\Workflow\Contracts\StepRunRepository;
 use Maestro\Workflow\Definition\WorkflowDefinitionRegistry;
+use Maestro\Workflow\Domain\Events\StepRetried;
+use Maestro\Workflow\Domain\Events\StepSkipped;
+use Maestro\Workflow\Domain\Events\StepStarted;
 use Maestro\Workflow\Domain\StepRun;
 use Maestro\Workflow\Domain\WorkflowInstance;
+use Maestro\Workflow\Enums\SkipReason;
+use Maestro\Workflow\Exceptions\ConditionEvaluationException;
 use Maestro\Workflow\Exceptions\DefinitionNotFoundException;
 use Maestro\Workflow\Exceptions\InvalidStateTransitionException;
 use Maestro\Workflow\Exceptions\StepDependencyException;
+use Maestro\Workflow\ValueObjects\StepDispatchResult;
 
 /**
  * Handles dispatching jobs for workflow steps.
  *
  * Creates step run records and dispatches jobs based on step type
- * (single job or fan-out).
+ * (single job or fan-out). Also evaluates step conditions and may
+ * skip steps if conditions are not met.
  */
 final readonly class StepDispatcher
 {
@@ -36,19 +47,41 @@ final readonly class StepDispatcher
         private StepOutputStoreFactory $stepOutputStoreFactory,
         private WorkflowContextProviderFactory $workflowContextProviderFactory,
         private WorkflowDefinitionRegistry $workflowDefinitionRegistry,
+        private ConditionEvaluator $conditionEvaluator,
+        private Dispatcher $eventDispatcher,
+        private ?PollingStepDispatcher $pollingStepDispatcher = null,
     ) {}
 
     /**
      * Dispatch a step for execution.
      *
      * Creates a step run record and dispatches the appropriate job(s).
+     * If the step has a condition that evaluates to false, the step is skipped.
      *
      * @throws StepDependencyException
      * @throws InvalidStateTransitionException
      * @throws DefinitionNotFoundException
+     * @throws ConditionEvaluationException
      */
     public function dispatchStep(WorkflowInstance $workflowInstance, StepDefinition $stepDefinition): StepRun
     {
+        $stepDispatchResult = $this->dispatchStepWithResult($workflowInstance, $stepDefinition);
+
+        return $stepDispatchResult->stepRun();
+    }
+
+    /**
+     * Dispatch a step and return a result indicating if it was dispatched or skipped.
+     *
+     * @throws StepDependencyException
+     * @throws InvalidStateTransitionException
+     * @throws DefinitionNotFoundException
+     * @throws ConditionEvaluationException
+     */
+    public function dispatchStepWithResult(
+        WorkflowInstance $workflowInstance,
+        StepDefinition $stepDefinition,
+    ): StepDispatchResult {
         $this->validateDependencies($workflowInstance, $stepDefinition);
 
         $existingStepRun = $this->stepRunRepository->findLatestByWorkflowIdAndStepKey(
@@ -57,6 +90,31 @@ final readonly class StepDispatcher
         );
 
         $attempt = $existingStepRun instanceof StepRun ? $existingStepRun->attempt : 0;
+
+        $conditionClass = $stepDefinition->conditionClass();
+        if ($conditionClass !== null) {
+            $stepOutputStore = $this->stepOutputStoreFactory->forWorkflow($workflowInstance->id);
+            $conditionResult = $this->conditionEvaluator->evaluateStepCondition(
+                $conditionClass,
+                $stepOutputStore,
+            );
+
+            if ($conditionResult->shouldSkip()) {
+                $skipReason = $conditionResult->skipReason() ?? SkipReason::ConditionFalse;
+
+                return $this->skipStep(
+                    $workflowInstance,
+                    $stepDefinition,
+                    $attempt + 1,
+                    $skipReason,
+                    $conditionResult->skipMessage(),
+                );
+            }
+        }
+
+        if ($stepDefinition instanceof PollingStep && $this->pollingStepDispatcher instanceof PollingStepDispatcher) {
+            return $this->pollingStepDispatcher->dispatchPollingStep($workflowInstance, $stepDefinition);
+        }
 
         $stepRun = StepRun::create(
             workflowId: $workflowInstance->id,
@@ -74,7 +132,49 @@ final readonly class StepDispatcher
 
         $this->stepRunRepository->save($stepRun);
 
-        return $stepRun;
+        $this->eventDispatcher->dispatch(new StepStarted(
+            workflowId: $workflowInstance->id,
+            stepRunId: $stepRun->id,
+            stepKey: $stepRun->stepKey,
+            attempt: $stepRun->attempt,
+            occurredAt: CarbonImmutable::now(),
+        ));
+
+        return StepDispatchResult::dispatched($stepRun);
+    }
+
+    /**
+     * Skip a step due to a condition or branch not being active.
+     *
+     * @throws InvalidStateTransitionException
+     */
+    public function skipStep(
+        WorkflowInstance $workflowInstance,
+        StepDefinition $stepDefinition,
+        int $attempt,
+        SkipReason $skipReason,
+        ?string $message = null,
+    ): StepDispatchResult {
+        $stepRun = StepRun::create(
+            workflowId: $workflowInstance->id,
+            stepKey: $stepDefinition->key(),
+            attempt: $attempt,
+        );
+
+        $stepRun->skip($skipReason, $message);
+
+        $this->stepRunRepository->save($stepRun);
+
+        $this->eventDispatcher->dispatch(new StepSkipped(
+            workflowId: $workflowInstance->id,
+            stepRunId: $stepRun->id,
+            stepKey: $stepRun->stepKey,
+            reason: $skipReason,
+            message: $message,
+            occurredAt: CarbonImmutable::now(),
+        ));
+
+        return StepDispatchResult::skipped($stepRun);
     }
 
     /**
@@ -83,10 +183,30 @@ final readonly class StepDispatcher
      * @throws StepDependencyException
      * @throws InvalidStateTransitionException
      * @throws DefinitionNotFoundException
+     * @throws ConditionEvaluationException
      */
     public function retryStep(WorkflowInstance $workflowInstance, StepDefinition $stepDefinition): StepRun
     {
-        return $this->dispatchStep($workflowInstance, $stepDefinition);
+        $previousStepRun = $this->stepRunRepository->findLatestByWorkflowIdAndStepKey(
+            $workflowInstance->id,
+            $stepDefinition->key(),
+        );
+
+        $newStepRun = $this->dispatchStep($workflowInstance, $stepDefinition);
+
+        if ($previousStepRun instanceof StepRun) {
+            $this->eventDispatcher->dispatch(new StepRetried(
+                workflowId: $workflowInstance->id,
+                stepRunId: $newStepRun->id,
+                stepKey: $newStepRun->stepKey,
+                attempt: $newStepRun->attempt,
+                previousStepRunId: $previousStepRun->id,
+                previousAttempt: $previousStepRun->attempt,
+                occurredAt: CarbonImmutable::now(),
+            ));
+        }
+
+        return $newStepRun;
     }
 
     /**

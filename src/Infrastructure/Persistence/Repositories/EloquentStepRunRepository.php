@@ -9,6 +9,7 @@ use Maestro\Workflow\Contracts\StepRunRepository;
 use Maestro\Workflow\Domain\Collections\StepRunCollection;
 use Maestro\Workflow\Domain\StepRun;
 use Maestro\Workflow\Enums\StepState;
+use Maestro\Workflow\Exceptions\InvalidBranchKeyException;
 use Maestro\Workflow\Exceptions\InvalidStepKeyException;
 use Maestro\Workflow\Exceptions\StepNotFoundException;
 use Maestro\Workflow\Infrastructure\Persistence\Hydrators\StepRunHydrator;
@@ -25,6 +26,7 @@ final readonly class EloquentStepRunRepository implements StepRunRepository
 
     /**
      * @throws InvalidStepKeyException
+     * @throws InvalidBranchKeyException
      */
     public function find(StepRunId $stepRunId): ?StepRun
     {
@@ -40,6 +42,7 @@ final readonly class EloquentStepRunRepository implements StepRunRepository
     /**
      * @throws StepNotFoundException
      * @throws InvalidStepKeyException
+     * @throws InvalidBranchKeyException
      */
     public function findOrFail(StepRunId $stepRunId): StepRun
     {
@@ -69,6 +72,7 @@ final readonly class EloquentStepRunRepository implements StepRunRepository
 
     /**
      * @throws InvalidStepKeyException
+     * @throws InvalidBranchKeyException
      */
     public function findByWorkflowId(WorkflowId $workflowId): StepRunCollection
     {
@@ -82,6 +86,7 @@ final readonly class EloquentStepRunRepository implements StepRunRepository
 
     /**
      * @throws InvalidStepKeyException
+     * @throws InvalidBranchKeyException
      */
     public function findByWorkflowIdAndStepKey(WorkflowId $workflowId, StepKey $stepKey): ?StepRun
     {
@@ -98,6 +103,7 @@ final readonly class EloquentStepRunRepository implements StepRunRepository
 
     /**
      * @throws InvalidStepKeyException
+     * @throws InvalidBranchKeyException
      */
     public function findLatestByWorkflowIdAndStepKey(WorkflowId $workflowId, StepKey $stepKey): ?StepRun
     {
@@ -115,6 +121,7 @@ final readonly class EloquentStepRunRepository implements StepRunRepository
 
     /**
      * @throws InvalidStepKeyException
+     * @throws InvalidBranchKeyException
      */
     public function findByWorkflowIdAndState(WorkflowId $workflowId, StepState $stepState): StepRunCollection
     {
@@ -135,6 +142,7 @@ final readonly class EloquentStepRunRepository implements StepRunRepository
 
     /**
      * @throws InvalidStepKeyException
+     * @throws InvalidBranchKeyException
      */
     public function findRunningByWorkflowId(WorkflowId $workflowId): StepRunCollection
     {
@@ -143,6 +151,7 @@ final readonly class EloquentStepRunRepository implements StepRunRepository
 
     /**
      * @throws InvalidStepKeyException
+     * @throws InvalidBranchKeyException
      */
     public function findPendingByWorkflowId(WorkflowId $workflowId): StepRunCollection
     {
@@ -216,12 +225,86 @@ final readonly class EloquentStepRunRepository implements StepRunRepository
             ->delete();
     }
 
+    public function markAsSuperseded(StepRunId $stepRunId, StepRunId $supersededById): bool
+    {
+        $affected = StepRunModel::query()
+            ->where('id', $stepRunId->value)
+            ->whereNull('superseded_by_id')
+            ->update([
+                'status' => StepState::Superseded->value,
+                'superseded_by_id' => $supersededById->value,
+                'superseded_at' => CarbonImmutable::now(),
+            ]);
+
+        return $affected > 0;
+    }
+
+    /**
+     * @param list<StepKey> $stepKeys
+     *
+     * @throws InvalidStepKeyException
+     * @throws InvalidBranchKeyException
+     */
+    public function findActiveByStepKeys(WorkflowId $workflowId, array $stepKeys): StepRunCollection
+    {
+        if ($stepKeys === []) {
+            return new StepRunCollection([]);
+        }
+
+        $stepKeyValues = array_map(
+            static fn (StepKey $stepKey): string => $stepKey->value,
+            $stepKeys,
+        );
+
+        $models = StepRunModel::query()
+            ->forWorkflow($workflowId->value)
+            ->whereIn('step_key', $stepKeyValues)
+            ->whereNull('superseded_by_id')
+            ->where('status', '!=', StepState::Superseded->value)
+            ->orderBy('created_at')
+            ->get();
+
+        return new StepRunCollection($this->hydrateModels($models->all()));
+    }
+
+    /**
+     * @param list<StepKey> $stepKeys
+     *
+     * @return array<string, StepRun>
+     *
+     * @throws InvalidStepKeyException
+     * @throws InvalidBranchKeyException
+     */
+    public function findLatestActiveByStepKeys(WorkflowId $workflowId, array $stepKeys): array
+    {
+        if ($stepKeys === []) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($stepKeys as $stepKey) {
+            $model = StepRunModel::query()
+                ->forWorkflowAndStep($workflowId->value, $stepKey->value)
+                ->whereNull('superseded_by_id')
+                ->where('status', '!=', StepState::Superseded->value)
+                ->latestAttempt()
+                ->first();
+
+            if ($model !== null) {
+                $result[$stepKey->value] = $this->stepRunHydrator->toDomain($model);
+            }
+        }
+
+        return $result;
+    }
+
     /**
      * @param array<int|string, StepRunModel> $models
      *
      * @return list<StepRun>
      *
      * @throws InvalidStepKeyException
+     * @throws InvalidBranchKeyException
      */
     private function hydrateModels(array $models): array
     {

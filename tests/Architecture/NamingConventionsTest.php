@@ -23,6 +23,7 @@ arch('service providers have ServiceProvider suffix')
         'Maestro\Workflow\Events',
         'Maestro\Workflow\Exceptions',
         'Maestro\Workflow\Facades',
+        'Maestro\Workflow\Http',
         'Maestro\Workflow\Models',
         'Maestro\Workflow\Jobs',
         'Maestro\Workflow\ValueObjects',

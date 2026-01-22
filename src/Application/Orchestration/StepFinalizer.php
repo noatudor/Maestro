@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace Maestro\Workflow\Application\Orchestration;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Events\Dispatcher;
 use Maestro\Workflow\Contracts\FanOutStep;
 use Maestro\Workflow\Contracts\JobLedgerRepository;
 use Maestro\Workflow\Contracts\StepDefinition;
 use Maestro\Workflow\Contracts\StepRunRepository;
+use Maestro\Workflow\Domain\Events\StepFailed;
+use Maestro\Workflow\Domain\Events\StepSucceeded;
 use Maestro\Workflow\Domain\StepRun;
 use Maestro\Workflow\Enums\JobState;
 
@@ -23,6 +26,7 @@ final readonly class StepFinalizer
     public function __construct(
         private StepRunRepository $stepRunRepository,
         private JobLedgerRepository $jobLedgerRepository,
+        private Dispatcher $eventDispatcher,
     ) {}
 
     /**
@@ -72,6 +76,8 @@ final readonly class StepFinalizer
         if (! $updatedStepRun instanceof StepRun) {
             return StepFinalizationResult::alreadyFinalized($stepRun);
         }
+
+        $this->dispatchFinalizationEvent($updatedStepRun, $stepJobStats, $success);
 
         return StepFinalizationResult::finalized($updatedStepRun);
     }
@@ -160,5 +166,38 @@ final readonly class StepFinalizer
             $stepJobStats->failed,
             $stepJobStats->total,
         );
+    }
+
+    private function dispatchFinalizationEvent(
+        StepRun $stepRun,
+        StepJobStats $stepJobStats,
+        bool $success,
+    ): void {
+        if ($success) {
+            $this->eventDispatcher->dispatch(new StepSucceeded(
+                workflowId: $stepRun->workflowId,
+                stepRunId: $stepRun->id,
+                stepKey: $stepRun->stepKey,
+                attempt: $stepRun->attempt,
+                totalJobCount: $stepJobStats->total,
+                durationMs: $stepRun->duration(),
+                occurredAt: CarbonImmutable::now(),
+            ));
+
+            return;
+        }
+
+        $this->eventDispatcher->dispatch(new StepFailed(
+            workflowId: $stepRun->workflowId,
+            stepRunId: $stepRun->id,
+            stepKey: $stepRun->stepKey,
+            attempt: $stepRun->attempt,
+            failedJobCount: $stepJobStats->failed,
+            totalJobCount: $stepJobStats->total,
+            failureCode: $stepRun->failureCode(),
+            failureMessage: $stepRun->failureMessage(),
+            durationMs: $stepRun->duration(),
+            occurredAt: CarbonImmutable::now(),
+        ));
     }
 }

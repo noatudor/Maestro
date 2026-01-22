@@ -33,6 +33,14 @@ final class WorkflowInstance
         private ?string $lockedBy,
         private ?CarbonImmutable $lockedAt,
         private CarbonImmutable $updatedAt,
+        private int $autoRetryCount,
+        private ?CarbonImmutable $nextAutoRetryAt,
+        private ?CarbonImmutable $compensationStartedAt,
+        private ?CarbonImmutable $compensatedAt,
+        private ?string $awaitingTriggerKey,
+        private ?CarbonImmutable $triggerTimeoutAt,
+        private ?CarbonImmutable $triggerRegisteredAt,
+        private ?CarbonImmutable $scheduledResumeAt,
     ) {}
 
     public static function create(
@@ -59,6 +67,14 @@ final class WorkflowInstance
             lockedBy: null,
             lockedAt: null,
             updatedAt: $now,
+            autoRetryCount: 0,
+            nextAutoRetryAt: null,
+            compensationStartedAt: null,
+            compensatedAt: null,
+            awaitingTriggerKey: null,
+            triggerTimeoutAt: null,
+            triggerRegisteredAt: null,
+            scheduledResumeAt: null,
         );
     }
 
@@ -79,6 +95,14 @@ final class WorkflowInstance
         ?CarbonImmutable $lockedAt,
         CarbonImmutable $createdAt,
         CarbonImmutable $updatedAt,
+        int $autoRetryCount = 0,
+        ?CarbonImmutable $nextAutoRetryAt = null,
+        ?CarbonImmutable $compensationStartedAt = null,
+        ?CarbonImmutable $compensatedAt = null,
+        ?string $awaitingTriggerKey = null,
+        ?CarbonImmutable $triggerTimeoutAt = null,
+        ?CarbonImmutable $triggerRegisteredAt = null,
+        ?CarbonImmutable $scheduledResumeAt = null,
     ): self {
         return new self(
             id: $workflowId,
@@ -97,6 +121,14 @@ final class WorkflowInstance
             lockedBy: $lockedBy,
             lockedAt: $lockedAt,
             updatedAt: $updatedAt,
+            autoRetryCount: $autoRetryCount,
+            nextAutoRetryAt: $nextAutoRetryAt,
+            compensationStartedAt: $compensationStartedAt,
+            compensatedAt: $compensatedAt,
+            awaitingTriggerKey: $awaitingTriggerKey,
+            triggerTimeoutAt: $triggerTimeoutAt,
+            triggerRegisteredAt: $triggerRegisteredAt,
+            scheduledResumeAt: $scheduledResumeAt,
         );
     }
 
@@ -160,6 +192,30 @@ final class WorkflowInstance
         return $this->updatedAt;
     }
 
+    public function autoRetryCount(): int
+    {
+        return $this->autoRetryCount;
+    }
+
+    public function nextAutoRetryAt(): ?CarbonImmutable
+    {
+        return $this->nextAutoRetryAt;
+    }
+
+    public function hasScheduledAutoRetry(): bool
+    {
+        return $this->nextAutoRetryAt instanceof CarbonImmutable;
+    }
+
+    public function isAutoRetryDue(): bool
+    {
+        if (! $this->nextAutoRetryAt instanceof CarbonImmutable) {
+            return false;
+        }
+
+        return CarbonImmutable::now()->gte($this->nextAutoRetryAt);
+    }
+
     public function isPending(): bool
     {
         return $this->workflowState === WorkflowState::Pending;
@@ -188,6 +244,79 @@ final class WorkflowInstance
     public function isCancelled(): bool
     {
         return $this->workflowState === WorkflowState::Cancelled;
+    }
+
+    public function isCompensating(): bool
+    {
+        return $this->workflowState === WorkflowState::Compensating;
+    }
+
+    public function isCompensated(): bool
+    {
+        return $this->workflowState === WorkflowState::Compensated;
+    }
+
+    public function isCompensationFailed(): bool
+    {
+        return $this->workflowState === WorkflowState::CompensationFailed;
+    }
+
+    public function compensationStartedAt(): ?CarbonImmutable
+    {
+        return $this->compensationStartedAt;
+    }
+
+    public function compensatedAt(): ?CarbonImmutable
+    {
+        return $this->compensatedAt;
+    }
+
+    public function awaitingTriggerKey(): ?string
+    {
+        return $this->awaitingTriggerKey;
+    }
+
+    public function triggerTimeoutAt(): ?CarbonImmutable
+    {
+        return $this->triggerTimeoutAt;
+    }
+
+    public function triggerRegisteredAt(): ?CarbonImmutable
+    {
+        return $this->triggerRegisteredAt;
+    }
+
+    public function scheduledResumeAt(): ?CarbonImmutable
+    {
+        return $this->scheduledResumeAt;
+    }
+
+    public function isAwaitingTrigger(): bool
+    {
+        return $this->isPaused() && $this->awaitingTriggerKey !== null;
+    }
+
+    public function isAwaitingTriggerKey(string $triggerKey): bool
+    {
+        return $this->isAwaitingTrigger() && $this->awaitingTriggerKey === $triggerKey;
+    }
+
+    public function isTriggerTimedOut(): bool
+    {
+        if (! $this->triggerTimeoutAt instanceof CarbonImmutable) {
+            return false;
+        }
+
+        return CarbonImmutable::now()->gte($this->triggerTimeoutAt);
+    }
+
+    public function isScheduledResumeDue(): bool
+    {
+        if (! $this->scheduledResumeAt instanceof CarbonImmutable) {
+            return false;
+        }
+
+        return CarbonImmutable::now()->gte($this->scheduledResumeAt);
     }
 
     public function isTerminal(): bool
@@ -234,6 +363,42 @@ final class WorkflowInstance
         $this->transitionTo(WorkflowState::Running);
         $this->pausedAt = null;
         $this->pausedReason = null;
+        $this->clearTriggerState();
+        $this->touch();
+    }
+
+    /**
+     * Pause the workflow awaiting an external trigger.
+     *
+     * @throws InvalidStateTransitionException
+     */
+    public function pauseForTrigger(
+        string $triggerKey,
+        CarbonImmutable $timeoutAt,
+        ?CarbonImmutable $scheduledResumeAt = null,
+        ?string $reason = null,
+    ): void {
+        $this->transitionTo(WorkflowState::Paused);
+        $this->pausedAt = CarbonImmutable::now();
+        $this->pausedReason = $reason ?? 'Awaiting trigger: '.$triggerKey;
+        $this->awaitingTriggerKey = $triggerKey;
+        $this->triggerTimeoutAt = $timeoutAt;
+        $this->triggerRegisteredAt = CarbonImmutable::now();
+        $this->scheduledResumeAt = $scheduledResumeAt;
+        $this->touch();
+    }
+
+    /**
+     * Resume workflow from a trigger.
+     *
+     * @throws InvalidStateTransitionException
+     */
+    public function resumeFromTrigger(): void
+    {
+        $this->transitionTo(WorkflowState::Running);
+        $this->pausedAt = null;
+        $this->pausedReason = null;
+        $this->clearTriggerState();
         $this->touch();
     }
 
@@ -309,9 +474,113 @@ final class WorkflowInstance
         $this->touch();
     }
 
+    /**
+     * Start compensation execution.
+     *
+     * @throws InvalidStateTransitionException
+     */
+    public function startCompensation(): void
+    {
+        $this->transitionTo(WorkflowState::Compensating);
+        $this->compensationStartedAt = CarbonImmutable::now();
+        $this->currentStepKey = null;
+        $this->touch();
+    }
+
+    /**
+     * Mark compensation as complete.
+     *
+     * @throws InvalidStateTransitionException
+     */
+    public function completeCompensation(): void
+    {
+        $this->transitionTo(WorkflowState::Compensated);
+        $this->compensatedAt = CarbonImmutable::now();
+        $this->touch();
+    }
+
+    /**
+     * Mark compensation as failed.
+     *
+     * @throws InvalidStateTransitionException
+     */
+    public function failCompensation(): void
+    {
+        $this->transitionTo(WorkflowState::CompensationFailed);
+        $this->touch();
+    }
+
+    /**
+     * Retry compensation from failed state.
+     *
+     * @throws InvalidStateTransitionException
+     */
+    public function retryCompensation(): void
+    {
+        if (! $this->isCompensationFailed()) {
+            throw InvalidStateTransitionException::forWorkflow($this->workflowState, WorkflowState::Compensating);
+        }
+
+        $this->transitionTo(WorkflowState::Compensating);
+        $this->touch();
+    }
+
+    /**
+     * Skip remaining compensation and mark as compensated.
+     *
+     * Used when compensation has failed but we want to consider it complete.
+     *
+     * @throws InvalidStateTransitionException
+     */
+    public function skipRemainingCompensation(): void
+    {
+        if (! $this->isCompensationFailed()) {
+            throw InvalidStateTransitionException::forWorkflow($this->workflowState, WorkflowState::Compensated);
+        }
+
+        $this->transitionTo(WorkflowState::Compensated);
+        $this->compensatedAt = CarbonImmutable::now();
+        $this->touch();
+    }
+
     public function advanceToStep(StepKey $stepKey): void
     {
         $this->currentStepKey = $stepKey;
+        $this->touch();
+    }
+
+    /**
+     * Schedule an automatic retry at the specified time.
+     *
+     * This increments the auto-retry count and sets the scheduled time.
+     */
+    public function scheduleAutoRetry(CarbonImmutable $scheduledFor): void
+    {
+        $this->autoRetryCount++;
+        $this->nextAutoRetryAt = $scheduledFor;
+        $this->touch();
+    }
+
+    /**
+     * Clear the scheduled auto-retry.
+     *
+     * Called when auto-retry is executed or cancelled.
+     */
+    public function clearAutoRetry(): void
+    {
+        $this->nextAutoRetryAt = null;
+        $this->touch();
+    }
+
+    /**
+     * Reset auto-retry count.
+     *
+     * Called when the workflow succeeds or when manual intervention occurs.
+     */
+    public function resetAutoRetryCount(): void
+    {
+        $this->autoRetryCount = 0;
+        $this->nextAutoRetryAt = null;
         $this->touch();
     }
 
@@ -347,6 +616,17 @@ final class WorkflowInstance
         $this->lockedBy = null;
         $this->lockedAt = null;
         $this->touch();
+    }
+
+    /**
+     * Clear trigger state without changing workflow state.
+     */
+    private function clearTriggerState(): void
+    {
+        $this->awaitingTriggerKey = null;
+        $this->triggerTimeoutAt = null;
+        $this->triggerRegisteredAt = null;
+        $this->scheduledResumeAt = null;
     }
 
     /**

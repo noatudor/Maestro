@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace Maestro\Workflow\Domain;
 
 use Carbon\CarbonImmutable;
+use Maestro\Workflow\Enums\RetrySource;
+use Maestro\Workflow\Enums\SkipReason;
 use Maestro\Workflow\Enums\StepState;
 use Maestro\Workflow\Exceptions\InvalidStateTransitionException;
+use Maestro\Workflow\ValueObjects\BranchKey;
 use Maestro\Workflow\ValueObjects\StepKey;
 use Maestro\Workflow\ValueObjects\StepRunId;
 use Maestro\Workflow\ValueObjects\WorkflowId;
@@ -27,6 +30,15 @@ final class StepRun
         private int $completedJobCount,
         private int $failedJobCount,
         private int $totalJobCount,
+        private ?StepRunId $supersededById,
+        private ?CarbonImmutable $supersededAt,
+        private readonly ?RetrySource $retrySource,
+        private ?SkipReason $skipReason,
+        private ?string $skipMessage,
+        private readonly ?BranchKey $branchKey,
+        private int $pollAttemptCount,
+        private ?CarbonImmutable $nextPollAt,
+        private ?CarbonImmutable $pollStartedAt,
         private CarbonImmutable $updatedAt,
     ) {}
 
@@ -36,6 +48,8 @@ final class StepRun
         int $attempt = 1,
         int $totalJobCount = 0,
         ?StepRunId $stepRunId = null,
+        ?RetrySource $retrySource = null,
+        ?BranchKey $branchKey = null,
     ): self {
         $now = CarbonImmutable::now();
 
@@ -53,6 +67,15 @@ final class StepRun
             completedJobCount: 0,
             failedJobCount: 0,
             totalJobCount: $totalJobCount,
+            supersededById: null,
+            supersededAt: null,
+            retrySource: $retrySource,
+            skipReason: null,
+            skipMessage: null,
+            branchKey: $branchKey,
+            pollAttemptCount: 0,
+            nextPollAt: null,
+            pollStartedAt: null,
             updatedAt: $now,
         );
     }
@@ -70,6 +93,15 @@ final class StepRun
         int $completedJobCount,
         int $failedJobCount,
         int $totalJobCount,
+        ?StepRunId $supersededById,
+        ?CarbonImmutable $supersededAt,
+        ?RetrySource $retrySource,
+        ?SkipReason $skipReason,
+        ?string $skipMessage,
+        ?BranchKey $branchKey,
+        int $pollAttemptCount,
+        ?CarbonImmutable $nextPollAt,
+        ?CarbonImmutable $pollStartedAt,
         CarbonImmutable $createdAt,
         CarbonImmutable $updatedAt,
     ): self {
@@ -87,6 +119,15 @@ final class StepRun
             completedJobCount: $completedJobCount,
             failedJobCount: $failedJobCount,
             totalJobCount: $totalJobCount,
+            supersededById: $supersededById,
+            supersededAt: $supersededAt,
+            retrySource: $retrySource,
+            skipReason: $skipReason,
+            skipMessage: $skipMessage,
+            branchKey: $branchKey,
+            pollAttemptCount: $pollAttemptCount,
+            nextPollAt: $nextPollAt,
+            pollStartedAt: $pollStartedAt,
             updatedAt: $updatedAt,
         );
     }
@@ -159,6 +200,174 @@ final class StepRun
     public function isTerminal(): bool
     {
         return $this->stepState->isTerminal();
+    }
+
+    public function isSuperseded(): bool
+    {
+        return $this->stepState === StepState::Superseded;
+    }
+
+    public function supersededById(): ?StepRunId
+    {
+        return $this->supersededById;
+    }
+
+    public function supersededAt(): ?CarbonImmutable
+    {
+        return $this->supersededAt;
+    }
+
+    public function retrySource(): ?RetrySource
+    {
+        return $this->retrySource;
+    }
+
+    public function skipReason(): ?SkipReason
+    {
+        return $this->skipReason;
+    }
+
+    public function skipMessage(): ?string
+    {
+        return $this->skipMessage;
+    }
+
+    public function branchKey(): ?BranchKey
+    {
+        return $this->branchKey;
+    }
+
+    public function isSkipped(): bool
+    {
+        return $this->stepState === StepState::Skipped;
+    }
+
+    public function isPolling(): bool
+    {
+        return $this->stepState === StepState::Polling;
+    }
+
+    public function isTimedOut(): bool
+    {
+        return $this->stepState === StepState::TimedOut;
+    }
+
+    public function pollAttemptCount(): int
+    {
+        return $this->pollAttemptCount;
+    }
+
+    public function nextPollAt(): ?CarbonImmutable
+    {
+        return $this->nextPollAt;
+    }
+
+    public function pollStartedAt(): ?CarbonImmutable
+    {
+        return $this->pollStartedAt;
+    }
+
+    /**
+     * Transition to polling state for polling steps.
+     *
+     * @throws InvalidStateTransitionException
+     */
+    public function startPolling(): void
+    {
+        $this->transitionTo(StepState::Polling);
+        $this->startedAt = CarbonImmutable::now();
+        $this->pollStartedAt = CarbonImmutable::now();
+        $this->touch();
+    }
+
+    /**
+     * Schedule the next poll execution.
+     */
+    public function scheduleNextPoll(CarbonImmutable $nextPollAt): void
+    {
+        $this->nextPollAt = $nextPollAt;
+        $this->touch();
+    }
+
+    /**
+     * Record a poll attempt.
+     */
+    public function recordPollAttempt(): void
+    {
+        $this->pollAttemptCount++;
+        $this->touch();
+    }
+
+    /**
+     * Mark polling step as timed out.
+     *
+     * @throws InvalidStateTransitionException
+     */
+    public function timeout(?string $code = null, ?string $message = null): void
+    {
+        $this->transitionTo(StepState::TimedOut);
+        $this->finishedAt = CarbonImmutable::now();
+        $this->nextPollAt = null;
+        $this->failureCode = $code;
+        $this->failureMessage = $message;
+        $this->touch();
+    }
+
+    /**
+     * Calculate duration since polling started.
+     */
+    public function pollingDuration(): ?int
+    {
+        if (! $this->pollStartedAt instanceof CarbonImmutable) {
+            return null;
+        }
+
+        $endTime = $this->finishedAt ?? CarbonImmutable::now();
+
+        return (int) $this->pollStartedAt->diffInSeconds($endTime);
+    }
+
+    /**
+     * Check if next poll is due.
+     */
+    public function isPollDue(): bool
+    {
+        if (! $this->isPolling()) {
+            return false;
+        }
+
+        if (! $this->nextPollAt instanceof CarbonImmutable) {
+            return false;
+        }
+
+        return $this->nextPollAt->lessThanOrEqualTo(CarbonImmutable::now());
+    }
+
+    /**
+     * Mark this step run as skipped.
+     *
+     * @throws InvalidStateTransitionException
+     */
+    public function skip(SkipReason $skipReason, ?string $message = null): void
+    {
+        $this->transitionTo(StepState::Skipped);
+        $this->finishedAt = CarbonImmutable::now();
+        $this->skipReason = $skipReason;
+        $this->skipMessage = $message;
+        $this->touch();
+    }
+
+    /**
+     * Mark this step run as superseded by another step run.
+     *
+     * @throws InvalidStateTransitionException
+     */
+    public function supersede(StepRunId $stepRunId): void
+    {
+        $this->transitionTo(StepState::Superseded);
+        $this->supersededById = $stepRunId;
+        $this->supersededAt = CarbonImmutable::now();
+        $this->touch();
     }
 
     public function hasAllJobsCompleted(): bool

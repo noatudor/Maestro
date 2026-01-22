@@ -26,10 +26,20 @@ use Override;
  * @property int $completed_job_count
  * @property int $failed_job_count
  * @property int $total_job_count
+ * @property string|null $superseded_by_id
+ * @property CarbonImmutable|null $superseded_at
+ * @property string|null $retry_source
+ * @property string|null $skip_reason
+ * @property string|null $skip_message
+ * @property string|null $branch_key
+ * @property int $poll_attempt_count
+ * @property CarbonImmutable|null $next_poll_at
+ * @property CarbonImmutable|null $poll_started_at
  * @property CarbonImmutable $created_at
  * @property CarbonImmutable $updated_at
  * @property-read WorkflowModel $workflow
  * @property-read Collection<int, JobLedgerModel> $jobs
+ * @property-read StepRunModel|null $supersededBy
  */
 final class StepRunModel extends Model
 {
@@ -52,6 +62,15 @@ final class StepRunModel extends Model
         'completed_job_count',
         'failed_job_count',
         'total_job_count',
+        'superseded_by_id',
+        'superseded_at',
+        'retry_source',
+        'skip_reason',
+        'skip_message',
+        'branch_key',
+        'poll_attempt_count',
+        'next_poll_at',
+        'poll_started_at',
     ];
 
     /**
@@ -80,6 +99,14 @@ final class StepRunModel extends Model
     }
 
     /**
+     * @return BelongsTo<StepRunModel, $this>
+     */
+    public function supersededBy(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'superseded_by_id', 'id');
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
@@ -89,8 +116,12 @@ final class StepRunModel extends Model
             'completed_job_count' => 'integer',
             'failed_job_count' => 'integer',
             'total_job_count' => 'integer',
+            'poll_attempt_count' => 'integer',
             'started_at' => 'immutable_datetime',
             'finished_at' => 'immutable_datetime',
+            'superseded_at' => 'immutable_datetime',
+            'next_poll_at' => 'immutable_datetime',
+            'poll_started_at' => 'immutable_datetime',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',
         ];

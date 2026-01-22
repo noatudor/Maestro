@@ -7,6 +7,7 @@ namespace Maestro\Workflow\Definition;
 use Maestro\Workflow\Contracts\ContextLoader;
 use Maestro\Workflow\Contracts\StepDefinition;
 use Maestro\Workflow\Contracts\StepOutput;
+use Maestro\Workflow\Definition\Config\FailureResolutionConfig;
 use Maestro\Workflow\ValueObjects\DefinitionKey;
 use Maestro\Workflow\ValueObjects\DefinitionVersion;
 use Maestro\Workflow\ValueObjects\StepKey;
@@ -25,6 +26,7 @@ final readonly class WorkflowDefinition
         private string $displayName,
         private StepCollection $stepCollection,
         private ?string $contextLoaderClass,
+        private FailureResolutionConfig $failureResolutionConfig,
     ) {}
 
     /**
@@ -36,8 +38,16 @@ final readonly class WorkflowDefinition
         string $displayName,
         StepCollection $stepCollection,
         ?string $contextLoaderClass = null,
+        ?FailureResolutionConfig $failureResolutionConfig = null,
     ): self {
-        return new self($definitionKey, $definitionVersion, $displayName, $stepCollection, $contextLoaderClass);
+        return new self(
+            $definitionKey,
+            $definitionVersion,
+            $displayName,
+            $stepCollection,
+            $contextLoaderClass,
+            $failureResolutionConfig ?? FailureResolutionConfig::default(),
+        );
     }
 
     public function key(): DefinitionKey
@@ -71,6 +81,11 @@ final readonly class WorkflowDefinition
     public function hasContextLoader(): bool
     {
         return $this->contextLoaderClass !== null;
+    }
+
+    public function failureResolution(): FailureResolutionConfig
+    {
+        return $this->failureResolutionConfig;
     }
 
     public function getStep(StepKey $stepKey): ?StepDefinition

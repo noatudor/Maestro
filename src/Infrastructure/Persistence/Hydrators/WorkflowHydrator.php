@@ -215,6 +215,14 @@ final readonly class WorkflowHydrator
             lockedAt: $workflowModel->locked_at,
             createdAt: $workflowModel->created_at,
             updatedAt: $workflowModel->updated_at,
+            autoRetryCount: $workflowModel->auto_retry_count ?? 0,
+            nextAutoRetryAt: $workflowModel->next_auto_retry_at,
+            compensationStartedAt: $workflowModel->compensation_started_at,
+            compensatedAt: $workflowModel->compensated_at,
+            awaitingTriggerKey: $workflowModel->awaiting_trigger_key,
+            triggerTimeoutAt: $workflowModel->trigger_timeout_at,
+            triggerRegisteredAt: $workflowModel->trigger_registered_at,
+            scheduledResumeAt: $workflowModel->scheduled_resume_at,
         );
     }
 
@@ -237,6 +245,14 @@ final readonly class WorkflowHydrator
         $model->locked_at = $workflowInstance->lockedAt();
         $model->created_at = $workflowInstance->createdAt;
         $model->updated_at = $workflowInstance->updatedAt();
+        $model->auto_retry_count = $workflowInstance->autoRetryCount();
+        $model->next_auto_retry_at = $workflowInstance->nextAutoRetryAt();
+        $model->compensation_started_at = $workflowInstance->compensationStartedAt();
+        $model->compensated_at = $workflowInstance->compensatedAt();
+        $model->awaiting_trigger_key = $workflowInstance->awaitingTriggerKey();
+        $model->trigger_timeout_at = $workflowInstance->triggerTimeoutAt();
+        $model->trigger_registered_at = $workflowInstance->triggerRegisteredAt();
+        $model->scheduled_resume_at = $workflowInstance->scheduledResumeAt();
 
         return $model;
     }
@@ -255,5 +271,13 @@ final readonly class WorkflowHydrator
         $workflowModel->locked_by = $workflowInstance->lockedBy();
         $workflowModel->locked_at = $workflowInstance->lockedAt();
         $workflowModel->updated_at = $workflowInstance->updatedAt();
+        $workflowModel->auto_retry_count = $workflowInstance->autoRetryCount();
+        $workflowModel->next_auto_retry_at = $workflowInstance->nextAutoRetryAt();
+        $workflowModel->compensation_started_at = $workflowInstance->compensationStartedAt();
+        $workflowModel->compensated_at = $workflowInstance->compensatedAt();
+        $workflowModel->awaiting_trigger_key = $workflowInstance->awaitingTriggerKey();
+        $workflowModel->trigger_timeout_at = $workflowInstance->triggerTimeoutAt();
+        $workflowModel->trigger_registered_at = $workflowInstance->triggerRegisteredAt();
+        $workflowModel->scheduled_resume_at = $workflowInstance->scheduledResumeAt();
     }
 }

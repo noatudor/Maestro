@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Events\Dispatcher as EventDispatcher;
 use Maestro\Workflow\Application\Job\Middleware\JobLifecycleMiddleware;
 use Maestro\Workflow\Domain\JobRecord;
 use Maestro\Workflow\Enums\JobState;
@@ -13,8 +14,10 @@ use Maestro\Workflow\ValueObjects\WorkflowId;
 describe('JobLifecycleMiddleware', function (): void {
     beforeEach(function (): void {
         $this->repository = new InMemoryJobLedgerRepository();
+        $this->eventDispatcher = Mockery::mock(EventDispatcher::class);
+        $this->eventDispatcher->shouldReceive('dispatch');
         $this->workerId = 'test-worker-1';
-        $this->middleware = new JobLifecycleMiddleware($this->repository, $this->workerId);
+        $this->middleware = new JobLifecycleMiddleware($this->repository, $this->eventDispatcher, $this->workerId);
 
         $this->workflowId = WorkflowId::generate();
         $this->stepRunId = StepRunId::generate();

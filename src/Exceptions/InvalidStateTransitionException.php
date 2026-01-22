@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Maestro\Workflow\Exceptions;
 
+use Maestro\Workflow\Enums\CompensationRunStatus;
 use Maestro\Workflow\Enums\JobState;
 use Maestro\Workflow\Enums\StepState;
 use Maestro\Workflow\Enums\WorkflowState;
@@ -32,6 +33,14 @@ final class InvalidStateTransitionException extends WorkflowException
     {
         return new self(
             message: sprintf("Cannot transition job from '%s' to '%s'", $from->value, $to->value),
+            code: self::CODE,
+        );
+    }
+
+    public static function forCompensationRun(CompensationRunStatus $from, CompensationRunStatus $to): self
+    {
+        return new self(
+            message: sprintf("Cannot transition compensation run from '%s' to '%s'", $from->value, $to->value),
             code: self::CODE,
         );
     }

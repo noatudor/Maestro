@@ -11,8 +11,10 @@ use RuntimeException;
 
 /**
  * Test orchestrated job for unit testing.
+ *
+ * Not final to allow anonymous class extensions in tests.
  */
-final class TestOrchestratedJob extends OrchestratedJob
+class TestOrchestratedJob extends OrchestratedJob
 {
     public bool $executed = false;
 

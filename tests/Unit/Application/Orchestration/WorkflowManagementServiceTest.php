@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Container\Container;
+use Illuminate\Contracts\Events\Dispatcher as EventDispatcher;
+use Maestro\Workflow\Application\Branching\ConditionEvaluator;
 use Maestro\Workflow\Application\Context\WorkflowContextProviderFactory;
 use Maestro\Workflow\Application\Dependency\StepDependencyChecker;
 use Maestro\Workflow\Application\Job\JobDispatchService;
+use Maestro\Workflow\Application\Orchestration\CompensationExecutor;
 use Maestro\Workflow\Application\Orchestration\FailurePolicyHandler;
+use Maestro\Workflow\Application\Orchestration\FailureResolutionHandler;
+use Maestro\Workflow\Application\Orchestration\RetryFromStepService;
 use Maestro\Workflow\Application\Orchestration\StepDispatcher;
 use Maestro\Workflow\Application\Orchestration\StepFinalizer;
 use Maestro\Workflow\Application\Orchestration\WorkflowAdvancer;
@@ -21,7 +26,9 @@ use Maestro\Workflow\Enums\WorkflowState;
 use Maestro\Workflow\Exceptions\InvalidStateTransitionException;
 use Maestro\Workflow\Exceptions\WorkflowAlreadyCancelledException;
 use Maestro\Workflow\Exceptions\WorkflowNotFoundException;
+use Maestro\Workflow\Tests\Fakes\InMemoryCompensationRunRepository;
 use Maestro\Workflow\Tests\Fakes\InMemoryJobLedgerRepository;
+use Maestro\Workflow\Tests\Fakes\InMemoryResolutionDecisionRepository;
 use Maestro\Workflow\Tests\Fakes\InMemoryStepOutputRepository;
 use Maestro\Workflow\Tests\Fakes\InMemoryStepRunRepository;
 use Maestro\Workflow\Tests\Fakes\InMemoryWorkflowRepository;
@@ -46,10 +53,17 @@ describe('WorkflowManagementService', function (): void {
         $workflowContextProviderFactory = new WorkflowContextProviderFactory($mock);
         $dispatcherMock = Mockery::mock(Dispatcher::class);
         $dispatcherMock->shouldReceive('dispatch');
+
+        $eventDispatcherMock = Mockery::mock(EventDispatcher::class);
+        $eventDispatcherMock->shouldReceive('dispatch');
+
         $jobDispatchService = new JobDispatchService(
             $dispatcherMock,
             $this->jobLedgerRepository,
+            $eventDispatcherMock,
         );
+
+        $conditionEvaluator = new ConditionEvaluator($mock);
 
         $stepDispatcher = new StepDispatcher(
             $this->stepRunRepository,
@@ -58,16 +72,20 @@ describe('WorkflowManagementService', function (): void {
             $stepOutputStoreFactory,
             $workflowContextProviderFactory,
             $this->workflowDefinitionRegistry,
+            $conditionEvaluator,
+            $eventDispatcherMock,
         );
 
         $stepFinalizer = new StepFinalizer(
             $this->stepRunRepository,
             $this->jobLedgerRepository,
+            $eventDispatcherMock,
         );
 
         $failurePolicyHandler = new FailurePolicyHandler(
             $this->workflowRepository,
             $stepDispatcher,
+            $eventDispatcherMock,
         );
 
         $workflowAdvancer = new WorkflowAdvancer(
@@ -77,12 +95,48 @@ describe('WorkflowManagementService', function (): void {
             $stepFinalizer,
             $stepDispatcher,
             $failurePolicyHandler,
+            $conditionEvaluator,
+            $stepOutputStoreFactory,
+            $eventDispatcherMock,
+        );
+
+        $resolutionDecisionRepository = new InMemoryResolutionDecisionRepository();
+        $compensationRunRepository = new InMemoryCompensationRunRepository();
+
+        $compensationExecutor = new CompensationExecutor(
+            $this->workflowRepository,
+            $compensationRunRepository,
+            $this->workflowDefinitionRegistry,
+            $jobDispatchService,
+            $eventDispatcherMock,
+        );
+
+        $retryFromStepService = new RetryFromStepService(
+            $this->workflowRepository,
+            $this->stepRunRepository,
+            $this->stepOutputRepository,
+            $this->workflowDefinitionRegistry,
+            $stepDispatcher,
+            $compensationExecutor,
+            $eventDispatcherMock,
+        );
+
+        $failureResolutionHandler = new FailureResolutionHandler(
+            $this->workflowRepository,
+            $resolutionDecisionRepository,
+            $this->workflowDefinitionRegistry,
+            $workflowAdvancer,
+            $retryFromStepService,
+            $compensationExecutor,
+            $eventDispatcherMock,
         );
 
         $this->service = new WorkflowManagementService(
             $this->workflowRepository,
             $this->workflowDefinitionRegistry,
             $workflowAdvancer,
+            $failureResolutionHandler,
+            $eventDispatcherMock,
         );
 
         $workflowDefinition = WorkflowDefinitionBuilder::create('test-workflow')

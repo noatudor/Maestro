@@ -563,7 +563,6 @@ Final integration, edge case handling, and polish.
    - Usage guide with examples
    - Configuration reference
    - Troubleshooting guide
-   - Migration guide for updates
 
 ---
 

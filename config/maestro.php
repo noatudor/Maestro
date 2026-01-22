@@ -90,4 +90,43 @@ return [
         'keep_completed_days' => env('MAESTRO_KEEP_COMPLETED_DAYS', 30),
         'keep_failed_days' => env('MAESTRO_KEEP_FAILED_DAYS', 90),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | API Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configure the Maestro API routes and authentication. Set enabled to false
+    | to disable the API routes entirely. You can customize the middleware to
+    | use your own authentication (e.g., Sanctum) instead of the built-in
+    | HMAC signature validation.
+    |
+    */
+    'api' => [
+        'enabled' => env('MAESTRO_API_ENABLED', true),
+        'prefix' => env('MAESTRO_API_PREFIX', 'api/maestro'),
+        'middleware' => [
+            'api',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Trigger Authentication
+    |--------------------------------------------------------------------------
+    |
+    | Configure how external triggers are authenticated. By default, triggers
+    | use HMAC signature validation. Set driver to 'null' to disable trigger
+    | authentication (useful when using external middleware like Sanctum).
+    |
+    | Available drivers: 'hmac', 'null'
+    |
+    */
+    'trigger_auth' => [
+        'driver' => env('MAESTRO_TRIGGER_AUTH_DRIVER', 'null'),
+        'hmac' => [
+            'secret' => env('MAESTRO_TRIGGER_SECRET'),
+            'max_timestamp_drift_seconds' => env('MAESTRO_TRIGGER_MAX_DRIFT', 300),
+        ],
+    ],
 ];

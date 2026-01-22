@@ -5,13 +5,16 @@ declare(strict_types=1);
 namespace Maestro\Workflow\Contracts;
 
 use Maestro\Workflow\Domain\WorkflowInstance;
+use Maestro\Workflow\Enums\ResolutionDecision;
 use Maestro\Workflow\Exceptions\DefinitionNotFoundException;
 use Maestro\Workflow\Exceptions\InvalidStateTransitionException;
 use Maestro\Workflow\Exceptions\StepDependencyException;
 use Maestro\Workflow\Exceptions\WorkflowAlreadyCancelledException;
 use Maestro\Workflow\Exceptions\WorkflowLockedException;
+use Maestro\Workflow\Exceptions\WorkflowNotFailedException;
 use Maestro\Workflow\Exceptions\WorkflowNotFoundException;
 use Maestro\Workflow\ValueObjects\DefinitionKey;
+use Maestro\Workflow\ValueObjects\StepKey;
 use Maestro\Workflow\ValueObjects\WorkflowId;
 
 /**
@@ -77,4 +80,25 @@ interface WorkflowManager
      * Check if a workflow exists.
      */
     public function workflowExists(WorkflowId $workflowId): bool;
+
+    /**
+     * Resolve a failed workflow by applying a resolution decision.
+     *
+     * @param list<StepKey>|null $compensateStepKeys
+     *
+     * @throws WorkflowNotFoundException
+     * @throws WorkflowNotFailedException
+     * @throws InvalidStateTransitionException
+     * @throws DefinitionNotFoundException
+     * @throws StepDependencyException
+     * @throws WorkflowLockedException
+     */
+    public function resolveFailure(
+        WorkflowId $workflowId,
+        ResolutionDecision $resolutionDecision,
+        ?string $decidedBy = null,
+        ?string $reason = null,
+        ?StepKey $retryFromStepKey = null,
+        ?array $compensateStepKeys = null,
+    ): WorkflowInstance;
 }

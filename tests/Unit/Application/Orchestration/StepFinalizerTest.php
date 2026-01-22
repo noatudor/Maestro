@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Events\Dispatcher as EventDispatcher;
 use Maestro\Workflow\Application\Orchestration\StepFinalizer;
 use Maestro\Workflow\Definition\Config\NOfMCriteria;
 use Maestro\Workflow\Definition\Steps\FanOutStepDefinition;
@@ -19,9 +20,12 @@ describe('StepFinalizer', function (): void {
     beforeEach(function (): void {
         $this->stepRunRepository = new InMemoryStepRunRepository();
         $this->jobLedgerRepository = new InMemoryJobLedgerRepository();
+        $this->eventDispatcher = Mockery::mock(EventDispatcher::class);
+        $this->eventDispatcher->shouldReceive('dispatch');
         $this->finalizer = new StepFinalizer(
             $this->stepRunRepository,
             $this->jobLedgerRepository,
+            $this->eventDispatcher,
         );
 
         $this->workflowId = WorkflowId::generate();

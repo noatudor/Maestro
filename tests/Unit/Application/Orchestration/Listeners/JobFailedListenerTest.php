@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Container\Container;
+use Illuminate\Contracts\Events\Dispatcher as EventDispatcher;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Jobs\Job;
+use Maestro\Workflow\Application\Branching\ConditionEvaluator;
 use Maestro\Workflow\Application\Context\WorkflowContextProviderFactory;
 use Maestro\Workflow\Application\Dependency\StepDependencyChecker;
 use Maestro\Workflow\Application\Job\JobDispatchService;
@@ -47,10 +49,17 @@ describe('JobFailedListener', function (): void {
         $workflowContextProviderFactory = new WorkflowContextProviderFactory($mock);
         $dispatcherMock = Mockery::mock(Dispatcher::class);
         $dispatcherMock->shouldReceive('dispatch');
+
+        $eventDispatcherMock = Mockery::mock(EventDispatcher::class);
+        $eventDispatcherMock->shouldReceive('dispatch');
+
         $jobDispatchService = new JobDispatchService(
             $dispatcherMock,
             $this->jobLedgerRepository,
+            $eventDispatcherMock,
         );
+
+        $conditionEvaluator = new ConditionEvaluator($mock);
 
         $stepDispatcher = new StepDispatcher(
             $this->stepRunRepository,
@@ -59,16 +68,20 @@ describe('JobFailedListener', function (): void {
             $stepOutputStoreFactory,
             $workflowContextProviderFactory,
             $this->workflowDefinitionRegistry,
+            $conditionEvaluator,
+            $eventDispatcherMock,
         );
 
         $stepFinalizer = new StepFinalizer(
             $this->stepRunRepository,
             $this->jobLedgerRepository,
+            $eventDispatcherMock,
         );
 
         $failurePolicyHandler = new FailurePolicyHandler(
             $this->workflowRepository,
             $stepDispatcher,
+            $eventDispatcherMock,
         );
 
         $workflowAdvancer = new WorkflowAdvancer(
@@ -78,6 +91,9 @@ describe('JobFailedListener', function (): void {
             $stepFinalizer,
             $stepDispatcher,
             $failurePolicyHandler,
+            $conditionEvaluator,
+            $stepOutputStoreFactory,
+            $eventDispatcherMock,
         );
 
         $this->listener = new JobFailedListener($workflowAdvancer);

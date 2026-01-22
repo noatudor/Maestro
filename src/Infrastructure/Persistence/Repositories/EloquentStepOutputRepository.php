@@ -183,4 +183,23 @@ final readonly class EloquentStepOutputRepository implements StepOutputRepositor
 
         return $outputs;
     }
+
+    /**
+     * @param list<string> $stepKeys
+     */
+    public function deleteByStepKeys(WorkflowId $workflowId, array $stepKeys): int
+    {
+        if ($stepKeys === []) {
+            return 0;
+        }
+
+        $deleted = StepOutputModel::query()
+            ->where('workflow_id', $workflowId->value)
+            ->whereIn('step_key', $stepKeys)
+            ->delete();
+
+        assert(is_int($deleted));
+
+        return $deleted;
+    }
 }

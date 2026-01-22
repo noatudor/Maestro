@@ -5,7 +5,12 @@ declare(strict_types=1);
 namespace Maestro\Workflow\Definition\Steps;
 
 use Maestro\Workflow\Contracts\SingleJobStep;
+use Maestro\Workflow\Contracts\StepCondition;
 use Maestro\Workflow\Contracts\StepOutput;
+use Maestro\Workflow\Contracts\TerminationCondition;
+use Maestro\Workflow\Definition\Config\BranchDefinition;
+use Maestro\Workflow\Definition\Config\CompensationDefinition;
+use Maestro\Workflow\Definition\Config\PauseTriggerDefinition;
 use Maestro\Workflow\Definition\Config\QueueConfiguration;
 use Maestro\Workflow\Definition\Config\RetryConfiguration;
 use Maestro\Workflow\Definition\Config\StepTimeout;
@@ -18,6 +23,8 @@ final readonly class SingleJobStepDefinition extends AbstractStepDefinition impl
      * @param class-string $jobClass
      * @param list<class-string<StepOutput>> $requires
      * @param class-string<StepOutput>|null $produces
+     * @param class-string<StepCondition>|null $conditionClass
+     * @param class-string<TerminationCondition>|null $terminationConditionClass
      */
     private function __construct(
         StepKey $stepKey,
@@ -29,6 +36,11 @@ final readonly class SingleJobStepDefinition extends AbstractStepDefinition impl
         RetryConfiguration $retryConfiguration,
         StepTimeout $stepTimeout,
         QueueConfiguration $queueConfiguration,
+        ?CompensationDefinition $compensationDefinition,
+        ?string $conditionClass,
+        ?string $terminationConditionClass,
+        ?BranchDefinition $branchDefinition,
+        ?PauseTriggerDefinition $pauseTriggerDefinition,
     ) {
         parent::__construct(
             $stepKey,
@@ -39,6 +51,11 @@ final readonly class SingleJobStepDefinition extends AbstractStepDefinition impl
             $retryConfiguration,
             $stepTimeout,
             $queueConfiguration,
+            $compensationDefinition,
+            $conditionClass,
+            $terminationConditionClass,
+            $branchDefinition,
+            $pauseTriggerDefinition,
         );
     }
 
@@ -46,6 +63,8 @@ final readonly class SingleJobStepDefinition extends AbstractStepDefinition impl
      * @param class-string $jobClass
      * @param list<class-string<StepOutput>> $requires
      * @param class-string<StepOutput>|null $produces
+     * @param class-string<StepCondition>|null $conditionClass
+     * @param class-string<TerminationCondition>|null $terminationConditionClass
      */
     public static function create(
         StepKey $stepKey,
@@ -57,6 +76,11 @@ final readonly class SingleJobStepDefinition extends AbstractStepDefinition impl
         ?RetryConfiguration $retryConfiguration = null,
         ?StepTimeout $stepTimeout = null,
         ?QueueConfiguration $queueConfiguration = null,
+        ?CompensationDefinition $compensationDefinition = null,
+        ?string $conditionClass = null,
+        ?string $terminationConditionClass = null,
+        ?BranchDefinition $branchDefinition = null,
+        ?PauseTriggerDefinition $pauseTriggerDefinition = null,
     ): self {
         return new self(
             $stepKey,
@@ -68,6 +92,11 @@ final readonly class SingleJobStepDefinition extends AbstractStepDefinition impl
             $retryConfiguration ?? RetryConfiguration::default(),
             $stepTimeout ?? StepTimeout::none(),
             $queueConfiguration ?? QueueConfiguration::default(),
+            $compensationDefinition,
+            $conditionClass,
+            $terminationConditionClass,
+            $branchDefinition,
+            $pauseTriggerDefinition,
         );
     }
 

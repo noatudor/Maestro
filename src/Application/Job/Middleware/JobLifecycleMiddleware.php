@@ -4,9 +4,14 @@ declare(strict_types=1);
 
 namespace Maestro\Workflow\Application\Job\Middleware;
 
+use Carbon\CarbonImmutable;
 use Closure;
+use Illuminate\Contracts\Events\Dispatcher;
 use Maestro\Workflow\Application\Job\OrchestratedJob;
 use Maestro\Workflow\Contracts\JobLedgerRepository;
+use Maestro\Workflow\Domain\Events\JobFailed;
+use Maestro\Workflow\Domain\Events\JobStarted;
+use Maestro\Workflow\Domain\Events\JobSucceeded;
 use Maestro\Workflow\Domain\JobRecord;
 use Maestro\Workflow\Enums\JobState;
 use Maestro\Workflow\Exceptions\InvalidStateTransitionException;
@@ -22,6 +27,7 @@ final readonly class JobLifecycleMiddleware
 {
     public function __construct(
         private JobLedgerRepository $jobLedgerRepository,
+        private Dispatcher $eventDispatcher,
         private ?string $workerId = null,
     ) {}
 
@@ -49,6 +55,17 @@ final readonly class JobLifecycleMiddleware
         $jobRecord->start($this->workerId);
         $this->jobLedgerRepository->save($jobRecord);
 
+        $this->eventDispatcher->dispatch(new JobStarted(
+            workflowId: $jobRecord->workflowId,
+            stepRunId: $jobRecord->stepRunId,
+            jobId: $jobRecord->id,
+            jobUuid: $jobRecord->jobUuid,
+            jobClass: $jobRecord->jobClass,
+            attempt: $jobRecord->attempt(),
+            workerId: $this->workerId,
+            occurredAt: CarbonImmutable::now(),
+        ));
+
         try {
             $next($orchestratedJob);
 
@@ -56,16 +73,43 @@ final readonly class JobLifecycleMiddleware
             if ($jobRecord instanceof JobRecord && $jobRecord->status() === JobState::Running) {
                 $jobRecord->succeed();
                 $this->jobLedgerRepository->save($jobRecord);
+
+                $this->eventDispatcher->dispatch(new JobSucceeded(
+                    workflowId: $jobRecord->workflowId,
+                    stepRunId: $jobRecord->stepRunId,
+                    jobId: $jobRecord->id,
+                    jobUuid: $jobRecord->jobUuid,
+                    jobClass: $jobRecord->jobClass,
+                    attempt: $jobRecord->attempt(),
+                    runtimeMs: $jobRecord->runtimeMs(),
+                    occurredAt: CarbonImmutable::now(),
+                ));
             }
         } catch (Throwable $exception) {
             $jobRecord = $this->jobLedgerRepository->findByJobUuid($orchestratedJob->jobUuid);
             if ($jobRecord instanceof JobRecord && $jobRecord->status() === JobState::Running) {
+                $failureClass = $exception::class;
+                $failureMessage = $this->truncateMessage($exception->getMessage());
+
                 $jobRecord->fail(
-                    failureClass: $exception::class,
-                    failureMessage: $this->truncateMessage($exception->getMessage()),
+                    failureClass: $failureClass,
+                    failureMessage: $failureMessage,
                     failureTrace: $this->truncateTrace($exception->getTraceAsString()),
                 );
                 $this->jobLedgerRepository->save($jobRecord);
+
+                $this->eventDispatcher->dispatch(new JobFailed(
+                    workflowId: $jobRecord->workflowId,
+                    stepRunId: $jobRecord->stepRunId,
+                    jobId: $jobRecord->id,
+                    jobUuid: $jobRecord->jobUuid,
+                    jobClass: $jobRecord->jobClass,
+                    attempt: $jobRecord->attempt(),
+                    failureClass: $failureClass,
+                    failureMessage: $failureMessage,
+                    runtimeMs: $jobRecord->runtimeMs(),
+                    occurredAt: CarbonImmutable::now(),
+                ));
             }
 
             throw $exception;

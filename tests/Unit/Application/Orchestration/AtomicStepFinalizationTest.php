@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Events\Dispatcher as EventDispatcher;
 use Maestro\Workflow\Application\Orchestration\StepFinalizer;
 use Maestro\Workflow\Contracts\StepDefinition;
 use Maestro\Workflow\Domain\JobRecord;
@@ -18,10 +19,13 @@ describe('StepFinalizer atomic finalization', function (): void {
     beforeEach(function (): void {
         $this->stepRunRepository = new InMemoryStepRunRepository();
         $this->jobLedgerRepository = new InMemoryJobLedgerRepository();
+        $this->eventDispatcher = Mockery::mock(EventDispatcher::class);
+        $this->eventDispatcher->shouldReceive('dispatch');
 
         $this->finalizer = new StepFinalizer(
             $this->stepRunRepository,
             $this->jobLedgerRepository,
+            $this->eventDispatcher,
         );
     });
 
@@ -127,7 +131,10 @@ describe('StepFinalizer atomic finalization', function (): void {
             }
         };
 
-        $finalizer = new StepFinalizer($repository, $this->jobLedgerRepository);
+        $eventDispatcherMock = Mockery::mock(EventDispatcher::class);
+        $eventDispatcherMock->shouldReceive('dispatch');
+
+        $finalizer = new StepFinalizer($repository, $this->jobLedgerRepository, $eventDispatcherMock);
 
         $mock = Mockery::mock(StepDefinition::class);
         $mock->shouldReceive('key')->andReturn($stepKey);

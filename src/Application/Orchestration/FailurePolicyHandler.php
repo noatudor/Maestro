@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace Maestro\Workflow\Application\Orchestration;
 
+use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Events\Dispatcher;
 use Maestro\Workflow\Contracts\StepDefinition;
 use Maestro\Workflow\Contracts\WorkflowRepository;
+use Maestro\Workflow\Domain\Events\WorkflowFailed;
+use Maestro\Workflow\Domain\Events\WorkflowPaused;
 use Maestro\Workflow\Domain\StepRun;
 use Maestro\Workflow\Domain\WorkflowInstance;
 use Maestro\Workflow\Enums\FailurePolicy;
+use Maestro\Workflow\Exceptions\ConditionEvaluationException;
 use Maestro\Workflow\Exceptions\DefinitionNotFoundException;
 use Maestro\Workflow\Exceptions\InvalidStateTransitionException;
 use Maestro\Workflow\Exceptions\StepDependencyException;
@@ -28,6 +33,7 @@ final readonly class FailurePolicyHandler
     public function __construct(
         private WorkflowRepository $workflowRepository,
         private StepDispatcher $stepDispatcher,
+        private Dispatcher $eventDispatcher,
     ) {}
 
     /**
@@ -36,6 +42,7 @@ final readonly class FailurePolicyHandler
      * @throws InvalidStateTransitionException
      * @throws StepDependencyException
      * @throws DefinitionNotFoundException
+     * @throws ConditionEvaluationException
      */
     public function handle(
         WorkflowInstance $workflowInstance,
@@ -76,6 +83,15 @@ final readonly class FailurePolicyHandler
         );
 
         $this->workflowRepository->save($workflowInstance);
+
+        $this->eventDispatcher->dispatch(new WorkflowFailed(
+            workflowId: $workflowInstance->id,
+            definitionKey: $workflowInstance->definitionKey,
+            definitionVersion: $workflowInstance->definitionVersion,
+            failureCode: $stepRun->failureCode(),
+            failureMessage: $stepRun->failureMessage(),
+            occurredAt: CarbonImmutable::now(),
+        ));
     }
 
     /**
@@ -91,12 +107,21 @@ final readonly class FailurePolicyHandler
 
         $workflowInstance->pause($reason);
         $this->workflowRepository->save($workflowInstance);
+
+        $this->eventDispatcher->dispatch(new WorkflowPaused(
+            workflowId: $workflowInstance->id,
+            definitionKey: $workflowInstance->definitionKey,
+            definitionVersion: $workflowInstance->definitionVersion,
+            reason: $reason,
+            occurredAt: CarbonImmutable::now(),
+        ));
     }
 
     /**
      * @throws StepDependencyException
      * @throws InvalidStateTransitionException
      * @throws DefinitionNotFoundException
+     * @throws ConditionEvaluationException
      */
     private function retryStep(WorkflowInstance $workflowInstance, StepDefinition $stepDefinition): void
     {

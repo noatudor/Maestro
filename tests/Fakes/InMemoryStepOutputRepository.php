@@ -91,6 +91,28 @@ class InMemoryStepOutputRepository implements StepOutputRepository
         unset($this->outputs[$workflowId->value]);
     }
 
+    /**
+     * @param list<string> $stepKeys
+     */
+    public function deleteByStepKeys(WorkflowId $workflowId, array $stepKeys): int
+    {
+        if ($stepKeys === [] || ! isset($this->outputs[$workflowId->value])) {
+            return 0;
+        }
+
+        $deletedCount = 0;
+        $outputs = $this->outputs[$workflowId->value];
+
+        foreach ($outputs as $outputClass => $output) {
+            if (in_array($output->stepKey()->value, $stepKeys, true)) {
+                unset($this->outputs[$workflowId->value][$outputClass]);
+                $deletedCount++;
+            }
+        }
+
+        return $deletedCount;
+    }
+
     public function clear(): void
     {
         $this->outputs = [];

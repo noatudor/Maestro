@@ -6,6 +6,7 @@ namespace Maestro\Workflow\Application\Output;
 
 use Maestro\Workflow\Contracts\MergeableOutput;
 use Maestro\Workflow\Contracts\StepOutput;
+use Maestro\Workflow\Contracts\StepOutputReader;
 use Maestro\Workflow\Contracts\StepOutputRepository;
 use Maestro\Workflow\Exceptions\MissingRequiredOutputException;
 use Maestro\Workflow\ValueObjects\WorkflowId;
@@ -16,7 +17,7 @@ use Maestro\Workflow\ValueObjects\WorkflowId;
  * Handles reading, writing, and merging of step outputs with proper type safety.
  * Delegates atomic merge operations to the repository for proper transaction handling.
  */
-final readonly class StepOutputStore
+final readonly class StepOutputStore implements StepOutputReader
 {
     public function __construct(
         private WorkflowId $workflowId,

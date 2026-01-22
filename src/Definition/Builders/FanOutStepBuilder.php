@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace Maestro\Workflow\Definition\Builders;
 
 use Closure;
+use Maestro\Workflow\Contracts\StepCondition;
 use Maestro\Workflow\Contracts\StepOutput;
+use Maestro\Workflow\Contracts\TerminationCondition;
+use Maestro\Workflow\Definition\Config\BranchDefinition;
+use Maestro\Workflow\Definition\Config\CompensationDefinition;
 use Maestro\Workflow\Definition\Config\NOfMCriteria;
 use Maestro\Workflow\Definition\Config\QueueConfiguration;
 use Maestro\Workflow\Definition\Config\RetryConfiguration;
@@ -45,6 +49,16 @@ final class FanOutStepBuilder
     private ?StepTimeout $stepTimeout = null;
 
     private ?QueueConfiguration $queueConfiguration = null;
+
+    private ?CompensationDefinition $compensationDefinition = null;
+
+    /** @var class-string<StepCondition>|null */
+    private ?string $conditionClass = null;
+
+    /** @var class-string<TerminationCondition>|null */
+    private ?string $terminationConditionClass = null;
+
+    private ?BranchDefinition $branchDefinition = null;
 
     private function __construct(
         private readonly StepKey $stepKey,
@@ -249,6 +263,63 @@ final class FanOutStepBuilder
         return $this;
     }
 
+    /**
+     * Define a compensation job for this step.
+     *
+     * The compensation job is executed in reverse order when compensation is triggered.
+     *
+     * @param class-string $jobClass
+     */
+    public function compensation(
+        string $jobClass,
+        ?int $timeoutSeconds = null,
+        ?RetryConfiguration $retryConfiguration = null,
+        ?QueueConfiguration $queueConfiguration = null,
+    ): self {
+        $this->compensationDefinition = CompensationDefinition::create(
+            $jobClass,
+            $timeoutSeconds,
+            $retryConfiguration,
+            $queueConfiguration,
+        );
+
+        return $this;
+    }
+
+    /**
+     * Define a condition that must be met for this step to execute.
+     *
+     * @param class-string<StepCondition> $conditionClass
+     */
+    public function when(string $conditionClass): self
+    {
+        $this->conditionClass = $conditionClass;
+
+        return $this;
+    }
+
+    /**
+     * Define a termination condition checked after step completion.
+     *
+     * @param class-string<TerminationCondition> $conditionClass
+     */
+    public function terminateWhen(string $conditionClass): self
+    {
+        $this->terminationConditionClass = $conditionClass;
+
+        return $this;
+    }
+
+    /**
+     * Define this step as a branch point.
+     */
+    public function branch(BranchDefinition $branchDefinition): self
+    {
+        $this->branchDefinition = $branchDefinition;
+
+        return $this;
+    }
+
     public function build(): FanOutStepDefinition
     {
         return FanOutStepDefinition::create(
@@ -265,6 +336,10 @@ final class FanOutStepBuilder
             $this->retryConfiguration,
             $this->stepTimeout,
             $this->queueConfiguration,
+            $this->compensationDefinition,
+            $this->conditionClass,
+            $this->terminationConditionClass,
+            $this->branchDefinition,
         );
     }
 }

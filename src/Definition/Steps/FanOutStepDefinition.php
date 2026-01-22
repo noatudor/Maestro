@@ -6,7 +6,11 @@ namespace Maestro\Workflow\Definition\Steps;
 
 use Closure;
 use Maestro\Workflow\Contracts\FanOutStep;
+use Maestro\Workflow\Contracts\StepCondition;
 use Maestro\Workflow\Contracts\StepOutput;
+use Maestro\Workflow\Contracts\TerminationCondition;
+use Maestro\Workflow\Definition\Config\BranchDefinition;
+use Maestro\Workflow\Definition\Config\CompensationDefinition;
 use Maestro\Workflow\Definition\Config\NOfMCriteria;
 use Maestro\Workflow\Definition\Config\QueueConfiguration;
 use Maestro\Workflow\Definition\Config\RetryConfiguration;
@@ -21,6 +25,8 @@ final readonly class FanOutStepDefinition extends AbstractStepDefinition impleme
      * @param class-string $jobClass
      * @param list<class-string<StepOutput>> $requires
      * @param class-string<StepOutput>|null $produces
+     * @param class-string<StepCondition>|null $conditionClass
+     * @param class-string<TerminationCondition>|null $terminationConditionClass
      */
     private function __construct(
         StepKey $stepKey,
@@ -36,6 +42,10 @@ final readonly class FanOutStepDefinition extends AbstractStepDefinition impleme
         RetryConfiguration $retryConfiguration,
         StepTimeout $stepTimeout,
         QueueConfiguration $queueConfiguration,
+        ?CompensationDefinition $compensationDefinition,
+        ?string $conditionClass,
+        ?string $terminationConditionClass,
+        ?BranchDefinition $branchDefinition,
     ) {
         parent::__construct(
             $stepKey,
@@ -46,6 +56,10 @@ final readonly class FanOutStepDefinition extends AbstractStepDefinition impleme
             $retryConfiguration,
             $stepTimeout,
             $queueConfiguration,
+            $compensationDefinition,
+            $conditionClass,
+            $terminationConditionClass,
+            $branchDefinition,
         );
     }
 
@@ -53,6 +67,8 @@ final readonly class FanOutStepDefinition extends AbstractStepDefinition impleme
      * @param class-string $jobClass
      * @param list<class-string<StepOutput>> $requires
      * @param class-string<StepOutput>|null $produces
+     * @param class-string<StepCondition>|null $conditionClass
+     * @param class-string<TerminationCondition>|null $terminationConditionClass
      */
     public static function create(
         StepKey $stepKey,
@@ -68,6 +84,10 @@ final readonly class FanOutStepDefinition extends AbstractStepDefinition impleme
         ?RetryConfiguration $retryConfiguration = null,
         ?StepTimeout $stepTimeout = null,
         ?QueueConfiguration $queueConfiguration = null,
+        ?CompensationDefinition $compensationDefinition = null,
+        ?string $conditionClass = null,
+        ?string $terminationConditionClass = null,
+        ?BranchDefinition $branchDefinition = null,
     ): self {
         return new self(
             $stepKey,
@@ -83,6 +103,10 @@ final readonly class FanOutStepDefinition extends AbstractStepDefinition impleme
             $retryConfiguration ?? RetryConfiguration::default(),
             $stepTimeout ?? StepTimeout::none(),
             $queueConfiguration ?? QueueConfiguration::default(),
+            $compensationDefinition,
+            $conditionClass,
+            $terminationConditionClass,
+            $branchDefinition,
         );
     }
 

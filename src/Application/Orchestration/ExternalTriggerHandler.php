@@ -11,6 +11,7 @@ use Maestro\Workflow\Exceptions\InvalidStateTransitionException;
 use Maestro\Workflow\Exceptions\StepDependencyException;
 use Maestro\Workflow\Exceptions\WorkflowLockedException;
 use Maestro\Workflow\Exceptions\WorkflowNotFoundException;
+use Maestro\Workflow\ValueObjects\TriggerPayload;
 use Maestro\Workflow\ValueObjects\WorkflowId;
 
 /**
@@ -43,6 +44,7 @@ final readonly class ExternalTriggerHandler
     public function handleTrigger(
         WorkflowId $workflowId,
         string $triggerType,
+        ?TriggerPayload $triggerPayload = null,
     ): TriggerResult {
         $workflowInstance = $this->workflowRepository->findOrFail($workflowId);
 
@@ -63,7 +65,7 @@ final readonly class ExternalTriggerHandler
 
         $updatedWorkflow = $this->workflowRepository->findOrFail($workflowId);
 
-        return TriggerResult::success($updatedWorkflow, $triggerType);
+        return TriggerResult::success($updatedWorkflow, $triggerType, $triggerPayload);
     }
 
     /**
