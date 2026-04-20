@@ -1,6 +1,6 @@
 The MIT License (MIT)
 
-Copyright (c) Maestro Contributors <hello@maestro.dev>
+Copyright (c) Noa Tudor-Weber <noa.tudorweber@yahoo.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

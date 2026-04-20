@@ -1,5 +1,5 @@
 {
-    "name": "maestro/workflow",
+    "name": "noatudor/workflow",
     "description": "High-performance workflow orchestration for Laravel",
     "keywords": [
         "maestro",
@@ -14,8 +14,8 @@
     "license": "MIT",
     "authors": [
         {
-            "name": "Maestro Contributors",
-            "email": "hello@maestro.dev",
+            "name": "Noa Tudor-Weber",
+            "email": "noa.tudorweber@yahoo.com",
             "role": "Developer"
         }
     ],
