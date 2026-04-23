@@ -45,7 +45,7 @@ jobs:
           coverage: none
 
       - name: Install dependencies
-        uses: ramsey/composer-install@v3
+        uses: ramsey/composer-install@v4
 
       - name: Check code style
         run: vendor/bin/pint --test
@@ -66,7 +66,7 @@ jobs:
           coverage: none
 
       - name: Install dependencies
-        uses: ramsey/composer-install@v3
+        uses: ramsey/composer-install@v4
 
       - name: Run Rector
         run: vendor/bin/rector process --dry-run --ansi
@@ -88,7 +88,7 @@ jobs:
           coverage: none
 
       - name: Install dependencies
-        uses: ramsey/composer-install@v3
+        uses: ramsey/composer-install@v4
 
       - name: Run PHPStan
         run: vendor/bin/phpstan analyse --error-format=github --memory-limit=2G
@@ -288,7 +288,7 @@ jobs:
           coverage: pcov
 
       - name: Install dependencies
-        uses: ramsey/composer-install@v3
+        uses: ramsey/composer-install@v4
 
       - name: Execute tests with coverage
         run: vendor/bin/pest --coverage --min=95 --coverage-clover=coverage.xml
@@ -318,7 +318,7 @@ jobs:
           coverage: none
 
       - name: Install dependencies
-        uses: ramsey/composer-install@v3
+        uses: ramsey/composer-install@v4
 
       - name: Run benchmarks
         run: vendor/bin/phpbench run --report=ci --progress=none
